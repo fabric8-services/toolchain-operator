@@ -89,11 +89,11 @@ function deploy() {
 
 
   if [[ "$TARGET" = "rhel" ]]; then
-    tag_push ${REGISTRY}/openshiftio/rhel-tool-chain-operator:$TAG
-    tag_push ${REGISTRY}/openshiftio/rhel-tool-chain-operator:latest
+    tag_push ${REGISTRY}/openshiftio/rhel-toolchain-operator:$TAG
+    tag_push ${REGISTRY}/openshiftio/rhel-toolchain-operator:latest
   else
-    tag_push ${REGISTRY}/openshiftio/tool-chain-operator:$TAG
-    tag_push ${REGISTRY}/openshiftio/tool-chain-operator:latest
+    tag_push ${REGISTRY}/openshiftio/toolchain-operator:$TAG
+    tag_push ${REGISTRY}/openshiftio/toolchain-operator:latest
   fi
 
   echo 'CICO: Image pushed, ready to update deployed app'
