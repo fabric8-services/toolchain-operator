@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/dipak-pawar/toolchain-enabler/pkg/controller/toolchainenabler"
+	"github.com/fabric8-services/toolchain-operator/pkg/controller/toolchainenabler"
 )
 
 func init() {

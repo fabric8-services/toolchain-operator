@@ -7,8 +7,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/dipak-pawar/toolchain-enabler/pkg/apis"
-	"github.com/dipak-pawar/toolchain-enabler/pkg/controller"
+	"github.com/fabric8-services/toolchain-operator/pkg/apis"
+	"github.com/fabric8-services/toolchain-operator/pkg/controller"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/ready"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
