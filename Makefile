@@ -7,9 +7,6 @@ VENDOR_DIR=vendor
 SOURCE_DIR ?= .
 SOURCES := $(shell find $(SOURCE_DIR) -path $(SOURCE_DIR)/vendor -prune -o -name '*.go' -print)
 
-# Define and get the value for UNAME_S variable from shell
-UNAME_S := $(shell uname -s)
-
 ifeq ($(OS),Windows_NT)
 include ./.make/Makefile.win
 else
