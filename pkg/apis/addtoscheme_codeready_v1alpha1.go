@@ -1,7 +1,7 @@
 package apis
 
 import (
-	"github.com/dipak-pawar/toolchain-enabler/pkg/apis/codeready/v1alpha1"
+	"github.com/fabric8-services/toolchain-operator/pkg/apis/codeready/v1alpha1"
 )
 
 func init() {
