@@ -33,3 +33,9 @@
 ### VisualStudioCode Patch ###
 # Ignore all local history of files
 .history
+
+# toolchain-operator binaries
+bin/
+tmp/
+
+# Generated assets
