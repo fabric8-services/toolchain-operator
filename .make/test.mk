@@ -299,22 +299,6 @@ $(COV_PATH_UNIT): $(SOURCES) $(GOCOVMERGE_BIN)
 	$(foreach package, $(TEST_PACKAGES), $(call test-package,$(TEST_NAME),$(package),$(COV_PATH_UNIT),$(ERRORS_FILE),,$(ALL_PKGS_COMMA_SEPARATED)))
 	$(call check-test-results,$(ERRORS_FILE))
 
-# NOTE: We don't have prebuild-check as a dependency here because it would cause
-#       the recipe to be always executed.
-$(COV_PATH_INTEGRATION): $(SOURCES) $(GOCOVMERGE_BIN)
-	$(eval TEST_NAME := integration)
-	$(eval ERRORS_FILE := $(TMP_PATH)/errors.$(TEST_NAME))
-	$(call log-info,"Running test: $(TEST_NAME)")
-	@mkdir -p $(COV_DIR)
-	@echo "mode: $(COVERAGE_MODE)" > $(COV_PATH_INTEGRATION)
-	@-rm -f $(ERRORS_FILE)
-	$(eval TEST_PACKAGES:=$(shell go list ./... | grep -v $(ALL_PKGS_EXCLUDE_PATTERN)))
-	$(eval ALL_PKGS_COMMA_SEPARATED:=$(shell echo $(TEST_PACKAGES)  | tr ' ' ,))
-	$(foreach package, $(TEST_PACKAGES), $(call test-package,$(TEST_NAME),$(package),$(COV_PATH_INTEGRATION),$(ERRORS_FILE),F8_RESOURCE_DATABASE=1 ADMIN_RESOURCE_UNIT_TEST=0,$(ALL_PKGS_COMMA_SEPARATED)))
-	$(call check-test-results,$(ERRORS_FILE))
-
-
-
 #-------------------------------------------------------------------------------
 # Additional tools to build
 #-------------------------------------------------------------------------------
