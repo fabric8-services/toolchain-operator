@@ -10,6 +10,7 @@ import (
 	"github.com/fabric8-services/toolchain-operator/pkg/apis"
 	"github.com/fabric8-services/toolchain-operator/pkg/controller"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/ready"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -17,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-	"github.com/operator-framework/operator-sdk/pkg/leader"
 )
 
 var log = logf.Log.WithName("cmd")
@@ -53,7 +53,10 @@ func main() {
 	}
 
 	// Become the leader before proceeding
-	leader.Become(context.TODO(), "toolchain-enabler-lock")
+	if err := leader.Become(context.TODO(), "toolchain-enabler-lock"); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
 
 	r := ready.NewFileReady()
 	err = r.Set()
@@ -61,7 +64,13 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-	defer r.Unset()
+
+	defer func() {
+		if err := r.Unset(); err != nil {
+			log.Error(err, "")
+			os.Exit(1)
+		}
+	}()
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{Namespace: namespace})
