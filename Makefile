@@ -15,6 +15,7 @@ endif
 
 # declares variable that are OS-sensitive
 include ./.make/test.mk
+include ./.make/Makefile.dev
 
 DOCKER_BIN := $(shell command -v $(DOCKER_BIN_NAME) 2> /dev/null)
 

@@ -1,0 +1,6 @@
+FROM quay.io/openshiftio/toolchain-operator:faab15e
+
+ENV F8_INSTALL_PREFIX=/usr/local/toolchain-operator
+
+COPY bin/toolchain-operator ${F8_INSTALL_PREFIX}/bin/toolchain-operator
+RUN echo chmod +x ${F8_INSTALL_PREFIX}/bin/toolchain-operator

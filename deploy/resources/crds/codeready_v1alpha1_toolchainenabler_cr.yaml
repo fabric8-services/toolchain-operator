@@ -4,5 +4,3 @@ kind: ToolChainEnabler
 metadata:
   name: example-toolchainenabler
 spec:
-  # Add fields here
-  size: 3
