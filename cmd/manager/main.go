@@ -35,6 +35,7 @@ func main() {
 	// implementing the logr.Logger interface. This logger will
 	// be propagated through the whole operator, generating
 	// uniform and structured logs.
+	// ToDo: Use Logrus
 	logf.SetLogger(logf.ZapLogger(false))
 
 	printVersion()

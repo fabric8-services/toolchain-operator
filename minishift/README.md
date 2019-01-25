@@ -50,7 +50,6 @@ This build uses the `system:admin` account for creating all required resources f
 
 The above command then create deployment for toolchain-operator on Openshift.
 
-
 #### Start Minishift
 We have make target defined to start minishift with required cpu's and configuration.
 ```bash
