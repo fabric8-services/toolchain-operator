@@ -20,7 +20,6 @@ import (
 
 const (
 	Namespace = "codeready-toolchain"
-	Name      = "toolchain-enabler"
 )
 
 // TestToolChainEnablerController runs ReconcileToolChainEnabler.Reconcile() against a

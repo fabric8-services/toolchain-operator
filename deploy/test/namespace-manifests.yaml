@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: toolchain-enabler
+  namespace: codeready-toolchain
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: toolchain-enabler
+  namespace: codeready-toolchain
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
+  - serviceaccounts
+  verbs:
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - codeready.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: toolchain-enabler
+  namespace: codeready-toolchain
+subjects:
+- kind: ServiceAccount
+  name: toolchain-enabler
+roleRef:
+  kind: Role
+  name: toolchain-enabler
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toolchain-enabler
+  namespace: codeready-toolchain
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: toolchain-enabler
+  template:
+    metadata:
+      labels:
+        name: toolchain-enabler
+    spec:
+      serviceAccountName: toolchain-enabler
+      containers:
+        - name: toolchain-enabler
+          # Using latest until operator is not in usable shape.
+          image: quay.io/openshiftio/toolchain-operator:test
+          ports:
+          - containerPort: 60000
+            name: metrics
+          imagePullPolicy: IfNotPresent
+          readinessProbe:
+            exec:
+              command:
+                - stat
+                - /tmp/operator-sdk-ready
+            initialDelaySeconds: 4
+            periodSeconds: 10
+            failureThreshold: 1
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "toolchain-enabler"

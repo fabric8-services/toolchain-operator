@@ -114,6 +114,23 @@ test-unit: prebuild-check $(SOURCES)
 	$(eval TEST_PACKAGES:=$(shell go list ./... | grep -v $(ALL_PKGS_EXCLUDE_PATTERN)))
 	ADMIN_LOG_LEVEL=$(ADMIN_LOG_LEVEL) go test -vet off $(GO_TEST_VERBOSITY_FLAG) $(TEST_PACKAGES)
 
+.PHONY: test-e2e
+## Runs the e2e tests and WITHOUT producing coverage files for each package.
+test-e2e: build build-image e2e-setup
+	$(call log-info,"Running E2E test: $@")
+	go test ./test/e2e/... -root=$(PWD) -kubeconfig=$(HOME)/.kube/config -globalMan deploy/test/global-manifests.yaml -namespacedMan deploy/test/namespace-manifests.yaml -v -parallel=1 -singleNamespace
+
+.PHONY: e2e-setup
+e2e-setup:  e2e-cleanup
+	oc new-project toolchain-e2e-test || true
+
+.PHONY: e2e-cleanup
+e2e-cleanup:
+	oc login -u system:admin
+	oc delete clusterrolebinding toolchain-enabler || true
+	oc delete clusterrolebinding toolchain-enabler || true
+	oc delete clusterrole toolchain-enabler || true
+	oc delete project toolchain-e2e-test || true
 
 #-------------------------------------------------------------------------------
 # Inspect coverage of unit tests, integration tests in either pure

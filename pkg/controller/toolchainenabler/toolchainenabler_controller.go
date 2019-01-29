@@ -23,6 +23,7 @@ import (
 var log = logf.Log.WithName("controller_toolchainenabler")
 
 const (
+	Name    = "toolchain-enabler"
 	SAName  = "toolchain-sre"
 	CRBName = "system:toolchain-enabler:self-provisioner"
 )

@@ -1,0 +1,51 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: toolchainenablers.codeready.io
+spec:
+  group: codeready.io
+  names:
+    kind: ToolChainEnabler
+    listKind: ToolChainEnablerList
+    plural: toolchainenablers
+    singular: toolchainenabler
+  scope: Namespaced
+  version: v1alpha1
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: toolchain-enabler
+rules:
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  - project.openshift.io
+  resources:
+  - projectrequests
+  verbs:
+  - create
+- apiGroups:
+  - codeready.io
+  resources:
+  - toolchainenablers/finalizers
+  verbs:
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: toolchain-enabler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: toolchain-enabler
+subjects:
+- kind: ServiceAccount
+  name: toolchain-enabler
+  namespace: toolchain-e2e-test

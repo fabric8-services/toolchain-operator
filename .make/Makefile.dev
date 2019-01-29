@@ -9,8 +9,6 @@ TIMESTAMP:=$(shell date +%s)
 TAG?=$(SHORT_COMMIT)-$(TIMESTAMP)
 
 DEPLOY_DIR:=deploy
-RESOURCE_DIR:=resources
-DEPLOY_RESOURCES_DIR=$(DEPLOY_DIR)/$(RESOURCE_DIR)
 
 .PHONY: create-resources
 create-resources:
@@ -18,30 +16,31 @@ create-resources:
 	@oc login -u system:admin
 	@echo "Creating sub resources..."
 	@echo "Creating CRDs..."
-	@oc create -f $(DEPLOY_RESOURCES_DIR)/crds/codeready_v1alpha1_toolchainenabler_crd.yaml
+	@oc create -f $(DEPLOY_DIR)/crds/codeready_v1alpha1_toolchainenabler_crd.yaml
 	@echo "Creating Namespace"
-	@oc create -f $(DEPLOY_RESOURCES_DIR)/namespace.yaml
+	@oc create -f $(DEPLOY_DIR)/namespace.yaml
 	@echo "oc project codeready-toolchain"
 	@oc project codeready-toolchain
 	@echo "Creating Service Account"
-	@oc create -f $(DEPLOY_RESOURCES_DIR)/service_account.yaml
+	@oc create -f $(DEPLOY_DIR)/service_account.yaml
 	@echo "Creating Role"
-	@oc create -f $(DEPLOY_RESOURCES_DIR)/role.yaml
+	@oc create -f $(DEPLOY_DIR)/role.yaml
 	@echo "Creating RoleBinding"
-	@oc create -f $(DEPLOY_RESOURCES_DIR)/role_binding.yaml
+	@oc create -f $(DEPLOY_DIR)/role_binding.yaml
 	@echo "Creating Cluster Role"
-	@oc create -f $(DEPLOY_RESOURCES_DIR)/cluster_role.yaml
+	@oc create -f $(DEPLOY_DIR)/cluster_role.yaml
 	@echo "Creating ClusterRoleBinding"
-	@oc create -f $(DEPLOY_RESOURCES_DIR)/cluster_role_binding.yaml
+	@oc create -f $(DEPLOY_DIR)/cluster_role_binding.yaml
 
 .PHONY: create-cr
 create-cr:
 	@echo "Creating Custom Resource..."
-	@oc create -f $(DEPLOY_RESOURCES_DIR)/crds/codeready_v1alpha1_toolchainenabler_cr.yaml
+	@oc create -f $(DEPLOY_DIR)/crds/codeready_v1alpha1_toolchainenabler_cr.yaml
 
 .PHONY: build-image
 build-image:
 	docker build -t $(DOCKER_REPO)/$(IMAGE_NAME):$(TAG) -f Dockerfile.dev .
+	docker tag $(DOCKER_REPO)/$(IMAGE_NAME):$(TAG) $(DOCKER_REPO)/$(IMAGE_NAME):test
 
 .PHONY: deploy-operator-only
 deploy-operator-only:
@@ -60,21 +59,23 @@ clean-operator:
 clean-resources:
 	@echo "Deleting sub resources..."
 	@echo "Deleting RoleBinding"
-	@oc delete -f $(DEPLOY_RESOURCES_DIR)/role_binding.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/role_binding.yaml || true
 	@echo "Deleting ClusterRoleBinding"
-	@oc delete -f $(DEPLOY_RESOURCES_DIR)/cluster_role_binding.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/cluster_role_binding.yaml || true
 	@echo "Deleting Role"
-	@oc delete -f $(DEPLOY_RESOURCES_DIR)/role.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/role.yaml || true
 	@echo "Deleting ClusterRole"
-	@oc delete -f $(DEPLOY_RESOURCES_DIR)/cluster_role.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/cluster_role.yaml || true
 	@echo "Deleting Service Account"
-	@oc delete -f $(DEPLOY_RESOURCES_DIR)/service_account.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/service_account.yaml || true
 	@echo "Deleting Custom Resources..."
-	@oc delete -f $(DEPLOY_RESOURCES_DIR)/crds/codeready_v1alpha1_toolchainenabler_cr.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/crds/codeready_v1alpha1_toolchainenabler_cr.yaml || true
 	@echo "Deleting Namespace"
-	@oc delete -f $(DEPLOY_RESOURCES_DIR)/namespace.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/namespace.yaml || true
 	@echo "Deleting Custom Resource Definitions..."
-	@oc delete -f $(DEPLOY_RESOURCES_DIR)/crds/codeready_v1alpha1_toolchainenabler_crd.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/crds/codeready_v1alpha1_toolchainenabler_crd.yaml || true
+	@echo "Deleting ClusterRole 'toolchain-enabler'"
+	@oc delete clusterrole toolchain-enabler || true
 	@echo "Deleting ClusterRoleBinding 'system:toolchain-enabler:self-provisioner'"
 	@oc delete clusterrolebinding system:toolchain-enabler:self-provisioner || true
 
