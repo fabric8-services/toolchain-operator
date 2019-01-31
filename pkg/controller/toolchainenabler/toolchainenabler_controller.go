@@ -6,9 +6,13 @@ import (
 	"fmt"
 	codereadyv1alpha1 "github.com/fabric8-services/toolchain-operator/pkg/apis/codeready/v1alpha1"
 	"github.com/fabric8-services/toolchain-operator/pkg/client"
+	apioauthv1 "github.com/openshift/api/oauth/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/fabric8-services/toolchain-operator/pkg/secret"
+	errs "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -23,9 +27,10 @@ import (
 var log = logf.Log.WithName("controller_toolchainenabler")
 
 const (
-	Name    = "toolchain-enabler"
-	SAName  = "toolchain-sre"
-	CRBName = "system:toolchain-enabler:self-provisioner"
+	Name            = "toolchain-enabler"
+	SAName          = "toolchain-sre"
+	OAuthClientName = "codeready-toolchain"
+	CRBName         = "system:toolchain-enabler:self-provisioner"
 )
 
 // Add creates a new ToolChainEnabler Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -66,7 +71,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	return nil
+	return c.Watch(&source.Kind{Type: &apioauthv1.OAuthClient{}}, enqueueRequestForOwner)
 }
 
 var _ reconcile.Reconciler = &ReconcileToolChainEnabler{}
@@ -109,10 +114,15 @@ func (r *ReconcileToolChainEnabler) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("Skip reconcile: as Service Account 'toolchain-sre' created with self-provisioner cluster role")
+	if err := r.ensureOAuthClient(instance); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	reqLogger.Info("Skipping reconcile as all required objects are created and exist", "Service Account", SAName, "ClusterRoleBindning", CRBName, "OAuthClient", OAuthClientName)
 	return reconcile.Result{}, nil
 }
 
+// ensureSA creates Service Account if not exists
 func (r *ReconcileToolChainEnabler) ensureSA(tce *codereadyv1alpha1.ToolChainEnabler) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -133,7 +143,7 @@ func (r *ReconcileToolChainEnabler) ensureSA(tce *codereadyv1alpha1.ToolChainEna
 			return err
 		}
 
-		// SA created successfully
+		log.Info(fmt.Sprintf("ServiceAccount `%s` created successfully", SAName))
 		return nil
 	}
 	log.Info(fmt.Sprintf("ServiceAccount `%s` already exists", SAName))
@@ -141,7 +151,7 @@ func (r *ReconcileToolChainEnabler) ensureSA(tce *codereadyv1alpha1.ToolChainEna
 	return nil
 }
 
-// create ClusterRoleBinding for Service Account with self-provisioner Role
+// ensureClusterRoleBinding ensures ClusterRoleBinding for Service Account with self-provisioner Role
 func (r *ReconcileToolChainEnabler) ensureClusterRoleBinding(tce *codereadyv1alpha1.ToolChainEnabler, saName, namespace string) error {
 	crb := &rbacv1.ClusterRoleBinding{
 		Subjects: []rbacv1.Subject{
@@ -172,11 +182,48 @@ func (r *ReconcileToolChainEnabler) ensureClusterRoleBinding(tce *codereadyv1alp
 			return err
 		}
 
-		// ClusterRoleBinding created successfully
+		log.Info(fmt.Sprintf("ClusterRoleBinding %s created successfully", CRBName))
 		return nil
 	}
 
 	log.Info(fmt.Sprintf("ClusterRoleBinding `%s` already exists", CRBName))
+
+	return nil
+}
+
+// ensureOAuthClient creates OAuthClient if not exists
+func (r *ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.ToolChainEnabler) error {
+	randomString, err := secret.CreateRandomString(256)
+	if err != nil {
+		return errs.Wrapf(err, "failed to generate random string to be used as secret for OAuthClient")
+	}
+	var ageSeconds int32
+	oc := &apioauthv1.OAuthClient{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: OAuthClientName,
+		},
+		Secret:                   randomString,
+		GrantMethod:              apioauthv1.GrantHandlerAuto,
+		RedirectURIs:             []string{"https://auth.openshift.io/"},
+		AccessTokenMaxAgeSeconds: &ageSeconds,
+	}
+
+	// Set ToolChainEnabler instance as the owner and controller
+	if err := controllerutil.SetControllerReference(tce, oc, r.scheme); err != nil {
+		return err
+	}
+	_, err = r.client.GetOAuthClient(OAuthClientName)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("Creating", "OAuthClient", OAuthClientName)
+		if err := r.client.CreateOAuthClient(oc); err != nil {
+			return err
+		}
+
+		log.Info(fmt.Sprintf("OAuthClient %s created successfully", OAuthClientName))
+		return nil
+	}
+
+	log.Info(fmt.Sprintf("OAuthClient `%s` already exists", OAuthClientName))
 
 	return nil
 }

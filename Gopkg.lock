@@ -300,6 +300,14 @@
   version = "1.0.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:4dfdbbcff324f5b69fd05d3aa063669e05b9c72c981c1fe730b6efcfc84b9798"
+  name = "github.com/openshift/api"
+  packages = ["oauth/v1"]
+  pruneopts = "NT"
+  revision = "677153041bd22c1aa01fef67b68a8502ab1333d5"
+
+[[projects]]
   digest = "1:b186c2fcf87d05c5129ad0d89ea062853b0bdf6d6bca1ed4a22157962f2ad8dd"
   name = "github.com/operator-framework/operator-sdk"
   packages = [
@@ -341,6 +349,14 @@
   pruneopts = "NT"
   revision = "5f041e8faa004a95c88a202771f4cc3e991971e6"
   version = "v2.0.1"
+
+[[projects]]
+  digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -862,12 +878,14 @@
   analyzer-version = 1
   input-imports = [
     "github.com/fzipp/gocyclo",
+    "github.com/openshift/api/oauth/v1",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/ready",
     "github.com/operator-framework/operator-sdk/pkg/test",
     "github.com/operator-framework/operator-sdk/pkg/test/e2eutil",
     "github.com/operator-framework/operator-sdk/version",
+    "github.com/pkg/errors",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/wadey/gocovmerge",
@@ -878,6 +896,8 @@
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",
+    "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/code-generator/cmd/client-gen",

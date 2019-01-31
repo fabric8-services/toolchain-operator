@@ -10,6 +10,12 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - oauth.openshift.io
+  resources:
+  - oauthclients
+  verbs:
+  - '*'
+- apiGroups:
   - ""
   - project.openshift.io
   resources:

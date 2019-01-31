@@ -69,6 +69,11 @@ func verifyResources(t *testing.T, f *framework.Framework, ctx *framework.TestCt
 		return err
 	}
 
+	err = waitForOauthClient(t, f.Client, retryInterval, timeout)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

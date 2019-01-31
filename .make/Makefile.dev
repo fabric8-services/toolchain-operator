@@ -74,10 +74,8 @@ clean-resources:
 	@oc delete -f $(DEPLOY_DIR)/namespace.yaml || true
 	@echo "Deleting Custom Resource Definitions..."
 	@oc delete -f $(DEPLOY_DIR)/crds/codeready_v1alpha1_toolchainenabler_crd.yaml || true
-	@echo "Deleting ClusterRole 'toolchain-enabler'"
-	@oc delete clusterrole toolchain-enabler || true
-	@echo "Deleting ClusterRoleBinding 'system:toolchain-enabler:self-provisioner'"
-	@oc delete clusterrolebinding system:toolchain-enabler:self-provisioner || true
+	@echo "Deleting OAuthClient 'codeready-toolchain'"
+	@oc delete oauthclient codeready-toolchain || true
 
 .PHONY: deploy-operator
 deploy-operator: build build-image deploy-operator-only
