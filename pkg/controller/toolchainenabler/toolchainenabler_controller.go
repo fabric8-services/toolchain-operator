@@ -12,9 +12,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/fabric8-services/toolchain-operator/pkg/secret"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	errs "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -94,8 +96,21 @@ func (r *ReconcileToolChainEnabler) Reconcile(request reconcile.Request) (reconc
 
 	// Fetch the ToolChainEnabler instance
 	instance := &codereadyv1alpha1.ToolChainEnabler{}
-	if err := r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
+	namespacedName := request.NamespacedName
+
+	// overwrite for cluster scoped resources like OAuthClient, ClusterRoleBinding as you can't get namespace from it's event
+	if request.Namespace == "" {
+		log.Info("Couldn't find namespace in the request, getting it from env variable `WATCH_NAMESPACE`")
+		ns, err := k8sutil.GetWatchNamespace()
+		if err != nil {
+			log.Error(err, "can't reconcile request coming from cluster scoped resources event")
+			return reconcile.Result{}, nil
+		}
+		namespacedName = types.NamespacedName{Namespace: ns, Name: request.Name}
+	}
+	if err := r.client.Get(context.TODO(), namespacedName, instance); err != nil {
 		if errors.IsNotFound(err) {
+			log.Info("Requeueing request doesn't start as couldn't find requested object or stopped as requested object could have been deleted")
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
