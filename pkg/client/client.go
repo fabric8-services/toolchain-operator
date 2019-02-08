@@ -2,8 +2,8 @@ package client
 
 import (
 	"context"
-	apioauthv1 "github.com/openshift/api/oauth/v1"
 	oauthv1 "github.com/openshift/api/oauth/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,6 +16,7 @@ type Client interface {
 	ServiceAccount
 	ClusterRoleBinding
 	OAuthClient
+	Route
 }
 
 // Secret contains methods for manipulating Secrets
@@ -37,8 +38,14 @@ type ClusterRoleBinding interface {
 
 // OAuthClient contains methods for manipulating OAuthClient.
 type OAuthClient interface {
-	CreateOAuthClient(*apioauthv1.OAuthClient) error
-	GetOAuthClient(name string) (*apioauthv1.OAuthClient, error)
+	CreateOAuthClient(*oauthv1.OAuthClient) error
+	GetOAuthClient(name string) (*oauthv1.OAuthClient, error)
+}
+
+type Route interface {
+	CreateRoute(route *routev1.Route) error
+	GetRoute(namespace, name string) (*routev1.Route, error)
+	DeleteRoute(r *routev1.Route) error
 }
 
 // Interface assertion.
@@ -95,6 +102,25 @@ func (c *clientImpl) GetServiceAccount(namespace, name string) (*v1.ServiceAccou
 		return nil, err
 	}
 	return sa, nil
+}
+
+// CreateRoute creates the Route.
+func (c *clientImpl) CreateRoute(r *routev1.Route) error {
+	return c.Client.Create(context.Background(), r)
+}
+
+// GetRoute returns the existing Route.
+func (c *clientImpl) GetRoute(namespace, name string) (*routev1.Route, error) {
+	r := &routev1.Route{}
+	if err := c.Client.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: name}, r); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+// DeleteRoute deletes the Route.
+func (c *clientImpl) DeleteRoute(r *routev1.Route) error {
+	return c.Client.Delete(context.Background(), r)
 }
 
 // GetSecret returns the existing Secret.

@@ -2,6 +2,7 @@ package apis
 
 import (
 	oauthv1 "github.com/openshift/api/oauth/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -12,5 +13,6 @@ var AddToSchemes runtime.SchemeBuilder
 func AddToScheme(s *runtime.Scheme) error {
 	// add OAuthClient schema as it's openshift specific resource
 	AddToSchemes.Register(oauthv1.Install)
+	AddToSchemes.Register(routev1.Install)
 	return AddToSchemes.AddToScheme(s)
 }

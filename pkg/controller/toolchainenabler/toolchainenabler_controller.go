@@ -6,7 +6,7 @@ import (
 	"fmt"
 	codereadyv1alpha1 "github.com/fabric8-services/toolchain-operator/pkg/apis/codeready/v1alpha1"
 	"github.com/fabric8-services/toolchain-operator/pkg/client"
-	apioauthv1 "github.com/openshift/api/oauth/v1"
+	oauthv1 "github.com/openshift/api/oauth/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -73,7 +73,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	return c.Watch(&source.Kind{Type: &apioauthv1.OAuthClient{}}, enqueueRequestForOwner)
+	return c.Watch(&source.Kind{Type: &oauthv1.OAuthClient{}}, enqueueRequestForOwner)
 }
 
 var _ reconcile.Reconciler = &ReconcileToolChainEnabler{}
@@ -213,12 +213,12 @@ func (r *ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.Too
 		return errs.Wrapf(err, "failed to generate random string to be used as secret for OAuthClient")
 	}
 	var ageSeconds int32
-	oc := &apioauthv1.OAuthClient{
+	oc := &oauthv1.OAuthClient{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: OAuthClientName,
 		},
 		Secret:                   randomString,
-		GrantMethod:              apioauthv1.GrantHandlerAuto,
+		GrantMethod:              oauthv1.GrantHandlerAuto,
 		RedirectURIs:             []string{"https://auth.openshift.io/"},
 		AccessTokenMaxAgeSeconds: &ageSeconds,
 	}
