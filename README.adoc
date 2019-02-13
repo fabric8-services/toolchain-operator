@@ -1,0 +1,210 @@
+= Toolchain Operator
+:toc:
+:toc-placement: preamble
+:sectnums:
+:experimental:
+
+image:https://ci.centos.org/buildStatus/icon?job=devtools-toolchain-operator-build-master[Jenkins,link="https://ci.centos.org/view/Devtools/job/devtools-toolchain-operator-build-master/lastBuild/"]
+image:https://goreportcard.com/badge/github.com/fabric8-services/toolchain-operator[Go Report Card, link="https://goreportcard.com/report/github.com/fabric8-services/toolchain-operator"]
+image:https://godoc.org/github.com/fabric8-services/toolchain-operator?status.png[GoDoc,link="https://godoc.org/github.com/fabric8-services/toolchain-operator"]
+image:https://codecov.io/gh/fabric8-services/toolchain-operator/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/fabric8-services/toolchain-operator"]
+
+
+Operator to enable CodeReady Toolchain on OSD clusters
+
+== Overview
+To enable CodeReady Toolchain on any Openshift cluster, we need one time configuration setup which includes following things:
+
+    * creation of service account with required roles
+    * creation of oauth client
+    * finding routing subdomain
+    * finding cluster name and publicly available API URL
+
+Once, we have above resources, we'll need to update this cluster information to the cluster management service, so that it can provision namespaces/projects to required users on this new cluster.
+
+So in short this operator has to create required resources, find required cluster configuration details and update it to cluster management service.
+
+Btw, cluster management service is interested in following information.
+
+[source,json]
+----
+{
+       "name":"us-east-2",
+       "api-url":"https://api.starter-us-east-2.openshift.com",
+       "app-dns":"8a09.starter-us-east-2.openshiftapps.com",
+       "service-account-token":"fX0nH3d68LQ6SK5wBE6QeKJ6X8AZGVQO3dGQZZETakhmgmWAqr2KDFXE65KUwBO69aWoq",
+       "service-account-username":"dsaas",
+       "token-provider-id":"f867ac10-5e05-4359-a0c6-b855ece59090",
+       "auth-client-id":"autheast2",
+       "auth-client-secret":"autheast2secret",
+       "auth-client-default-scope":"user:full"
+}
+----
+
+
+== Building from source [[building]]
+
+The following guide is mainly targeted towards a Linux machine.
+
+=== Prerequisites [[prerequisites]]
+
+You need to install:
+
+* `go` (>= v1.11)
+* `git`
+* `mercurial`
+* `make`
+* `operator-sdk` (>= v0.4.0)
+
+==== Check your Go version [[check-go-version]]
+
+Run the following command to find out your Go version.
+
+----
+$ go version
+----
+
+*You must at least have Go version 1.11.*
+
+See <<fetch-dependencies>> to see an explanaition on how we deal with
+dependencies.
+
+==== Install dep [[dep-setup]]
+
+This project uses https://github.com/golang/dep[dep] as a package manager for Go.
+Running the `make deps` command will install `dep` in `$GOPATH/bin` if it's not already available on your system.
+
+==== Installing Operator-SDK
+Follow https://github.com/operator-framework/operator-sdk#quick-start[this] guide to install operator-sdk
+
+=== Get the code [[get-the-code]]
+
+Assuming you have Go installed and configured (have `$GOPATH` setup) here is
+how to build.
+
+Check out the code
+
+----
+$ git clone https://github.com/fabric8-services/toolchain-operator $GOPATH/src/github.com/fabric8-services/toolchain-operator
+----
+
+=== Build [[build]]
+
+Like most other projects, this one depends on various other projects that need
+to be downloaded.
+
+
+To fetch the dependencies and finally build the project you can type `make build` in a freshly clone repository of this project.
+
+----
+$ cd $GOPATH/src/github.com/fabric8-services/toolchain-operator
+$ make build
+----
+
+==== Special make targets
+
+There is no need to fetch the dependencies, or re-generate code every time you
+want to compile. That's why we offer special `make` targets for these topics:
+
+ * <<fetch-dependencies>>
+ * <<build>>
+ * <<clean>>
+ * <<test>>
+
+===== Fetch dependencies [[fetch-dependencies]]
+
+This will download all the dependencies for this project inside a directory
+called `vendor`. This way we can ensure that every developer and our CI system
+is using the same version.
+
+----
+$ cd $GOPATH/src/github.com/fabric8-services/toolchain-operator
+$ make deps
+----
+
+For dependency management of `go` packages we use https://github.com/golang/dep[`dep`].
+
+The file `Gopkg.toml` contains all dependencies. If you want to understand the format for this file, look link:https://golang.github.io/dep/docs/Gopkg.toml.html[here].
+
+
+===== Build [[build]]
+
+If you want to just build the toolchain operator, run `make build`.
+
+----
+$ cd $GOPATH/src/github.com/fabric8-services/toolchain-operator
+$ make build
+----
+
+===== Clean [[clean]]
+
+This removes all downloaded dependencies, all generated code and compiled
+artifacts.
+
+----
+$ cd $GOPATH/src/github.com/fabric8-services/toolchain-operator
+$ make clean
+----
+
+===== Tests [[test]]
+
+Here's how to run all available tests. All tests will check all Go packages
+except those in the `vendor/` directory.
+
+====== unit-tests
+Unit tests have the minimum requirement on time and environment setup.
+
+```bash
+cd $GOPATH/src/github.com/fabric8-services/toolchain-operator
+make test-unit
+```
+
+====== e2e-tests
+
+*TL; DR*
+```bash
+make minishift-start
+eval $(minishift docker-env)
+cd $GOPATH/src/github.com/fabric8-services/toolchain-operator
+make test-e2e
+```
+
+E2E tests are verifying successful deployment of Toolchain Operator and creation of required resources. End To end tests demand openshift cluster to be up and running.
+
+However you can run minishift which is single node openshift cluster. You can check it using `minishift status`. If not then start it using `make minishift-start` target.
+
+After successfully starting minishift, configure your shell to use docker daemon from minishift using `eval $(minishift docker-env)`.
+
+Now it's time to run E2E tests for `toolchain-operator` which will create it's required resources from `deploy/test/` on OpenShift use following command:
+```
+make test-e2e
+```
+
+This make target is building new docker image `$(DOCKER_REPO)/$(IMAGE_NAME):test`(e.g. `quay.io/openshiftio/toolchain-operator:test`) which is used in the operator's deployment manifests in e2e tests.
+
+Also remember that it uses the `system:admin` account for creating all required resources from `deploy/test` directory.
+
+all::
+To run both, the unit and the end to end tests you can run
++
+----
+$ cd $GOPATH/src/github.com/fabric8-services/toolchain-operator
+$ make test-all
+----
+
+== Running On Minishift
+Follow https://github.com/fabric8-services/toolchain-operator/blob/master/minishift/README.md[minishift] guide to run operator on minishift
+
+== Developer
+=== Code formatting
+
+To check if the code is properly formatted run:
+```
+$ make check-go-format
+```
+
+To format the code:
+```
+$ make format-go-code
+```
+

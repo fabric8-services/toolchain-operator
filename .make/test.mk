@@ -101,7 +101,7 @@ GOANALYSIS_DIRS=$(shell go list -f {{.Dir}} ./... | grep -v -E $(GOANALYSIS_PKGS
 
 .PHONY: test-all
 ## Runs the test-unit targets.
-test-all: prebuild-check test-unit
+test-all: prebuild-check test-unit test-e2e
 
 .PHONY: test-unit-with-coverage
 # Runs the unit tests and produces coverage files for each package.
