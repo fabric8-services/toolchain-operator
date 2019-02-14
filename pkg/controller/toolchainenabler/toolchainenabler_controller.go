@@ -100,7 +100,7 @@ func (r *ReconcileToolChainEnabler) Reconcile(request reconcile.Request) (reconc
 
 	// overwrite for cluster scoped resources like OAuthClient, ClusterRoleBinding as you can't get namespace from it's event
 	if request.Namespace == "" {
-		log.Info("Couldn't find namespace in the request, getting it from env variable `WATCH_NAMESPACE`")
+		log.Info(`couldn't find namespace in the request, getting it from env variable "WATCH_NAMESPACE"`)
 		ns, err := k8sutil.GetWatchNamespace()
 		if err != nil {
 			log.Error(err, "can't reconcile request coming from cluster scoped resources event")
@@ -151,17 +151,19 @@ func (r *ReconcileToolChainEnabler) ensureSA(tce *codereadyv1alpha1.ToolChainEna
 		return err
 	}
 
-	_, err := r.client.GetServiceAccount(tce.Namespace, SAName)
-	if err != nil && errors.IsNotFound(err) {
-		log.Info("Creating a new Service Account ", "Namespace", sa.Namespace, "Name", sa.Name)
-		if err = r.client.CreateServiceAccount(sa); err != nil {
-			return err
-		}
+	if _, err := r.client.GetServiceAccount(tce.Namespace, SAName); err != nil {
+		if errors.IsNotFound(err) {
+			log.Info("creating a new service sccount ", "namespace", sa.Namespace, "name", sa.Name)
+			if err := r.client.CreateServiceAccount(sa); err != nil {
+				return err
+			}
 
-		log.Info(fmt.Sprintf("ServiceAccount `%s` created successfully", SAName))
-		return nil
+			log.Info(fmt.Sprintf("service account %s created successfully", SAName))
+			return nil
+		}
+		return errs.Wrapf(err, "failed to get service account %s", SAName)
 	}
-	log.Info(fmt.Sprintf("ServiceAccount `%s` already exists", SAName))
+	log.Info(fmt.Sprintf("service account %s already exists", SAName))
 
 	return nil
 }
@@ -190,18 +192,20 @@ func (r *ReconcileToolChainEnabler) ensureClusterRoleBinding(tce *codereadyv1alp
 	if err := controllerutil.SetControllerReference(tce, crb, r.scheme); err != nil {
 		return err
 	}
-	_, err := r.client.GetClusterRoleBinding(CRBName)
-	if err != nil && errors.IsNotFound(err) {
-		log.Info("Adding `self-provisioner` cluster role to ", "Service Account", saName)
-		if err := r.client.CreateClusterRoleBinding(crb); err != nil {
-			return err
-		}
+	if _, err := r.client.GetClusterRoleBinding(CRBName); err != nil {
+		if errors.IsNotFound(err) {
+			log.Info(`adding "self-provisioner" cluster role to `, "Service Account", saName)
+			if err := r.client.CreateClusterRoleBinding(crb); err != nil {
+				return err
+			}
 
-		log.Info(fmt.Sprintf("ClusterRoleBinding %s created successfully", CRBName))
-		return nil
+			log.Info(fmt.Sprintf("clusterrolebinding %s created successfully", CRBName))
+			return nil
+		}
+		return errs.Wrapf(err, "failed to get clusterrolebinding %s", CRBName)
 	}
 
-	log.Info(fmt.Sprintf("ClusterRoleBinding `%s` already exists", CRBName))
+	log.Info(fmt.Sprintf("clusterrolebinding %s already exists", CRBName))
 
 	return nil
 }
@@ -210,7 +214,7 @@ func (r *ReconcileToolChainEnabler) ensureClusterRoleBinding(tce *codereadyv1alp
 func (r *ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.ToolChainEnabler) error {
 	randomString, err := secret.CreateRandomString(256)
 	if err != nil {
-		return errs.Wrapf(err, "failed to generate random string to be used as secret for OAuthClient")
+		return errs.Wrapf(err, "failed to generate random string to be used as secret for oauthclient")
 	}
 	var ageSeconds int32
 	oc := &oauthv1.OAuthClient{
@@ -227,18 +231,21 @@ func (r *ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.Too
 	if err := controllerutil.SetControllerReference(tce, oc, r.scheme); err != nil {
 		return err
 	}
-	_, err = r.client.GetOAuthClient(OAuthClientName)
-	if err != nil && errors.IsNotFound(err) {
-		log.Info("Creating", "OAuthClient", OAuthClientName)
-		if err := r.client.CreateOAuthClient(oc); err != nil {
-			return err
-		}
 
-		log.Info(fmt.Sprintf("OAuthClient %s created successfully", OAuthClientName))
-		return nil
+	if _, err = r.client.GetOAuthClient(OAuthClientName); err != nil {
+		if errors.IsNotFound(err) {
+			log.Info("creating", "oauthclient", OAuthClientName)
+			if err := r.client.CreateOAuthClient(oc); err != nil {
+				return err
+			}
+
+			log.Info(fmt.Sprintf("oauth client %s created successfully", OAuthClientName))
+			return nil
+		}
+		return errs.Wrapf(err, "failed to get oauthclient %s", OAuthClientName)
 	}
 
-	log.Info(fmt.Sprintf("OAuthClient `%s` already exists", OAuthClientName))
+	log.Info(fmt.Sprintf("oauth client %s already exists", OAuthClientName))
 
 	return nil
 }

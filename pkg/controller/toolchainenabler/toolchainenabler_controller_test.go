@@ -8,10 +8,13 @@ import (
 	"testing"
 
 	"context"
+	"fmt"
 	"github.com/fabric8-services/toolchain-operator/pkg/client"
 	oauthv1 "github.com/openshift/api/oauth/v1"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -47,7 +50,29 @@ func TestToolChainEnablerController(t *testing.T) {
 	s.AddKnownTypes(codereadyv1alpha1.SchemeGroupVersion, tce)
 
 	t.Run("Reconcile", func(t *testing.T) {
-		t.Run("With ToolChainEnabler Custom Resource", func(t *testing.T) {
+		t.Run("without registering openshift specific resources", func(t *testing.T) {
+			//given
+			// Create a fake client to mock API calls.
+			cl := client.NewClient(fake.NewFakeClient(objs...))
+
+			// Create a ReconcileToolChainEnabler object with the scheme and fake client.
+			r := &ReconcileToolChainEnabler{client: cl, scheme: s}
+
+			req := reconcileRequest(Name)
+
+			//when
+			_, err := r.Reconcile(req)
+
+			//then
+			_, oautherr := cl.GetOAuthClient(OAuthClientName)
+			assert.EqualError(t, err, fmt.Sprintf("failed to get oauthclient %s: %s", OAuthClientName, oautherr))
+		})
+
+		t.Run("with ToolChainEnabler custom resource", func(t *testing.T) {
+			// register openshift resource OAuthClient specific schema
+			err := oauthv1.Install(s)
+			require.NoError(t, err)
+
 			//given
 			// Create a fake client to mock API calls.
 			cl := client.NewClient(fake.NewFakeClient(objs...))
@@ -66,9 +91,10 @@ func TestToolChainEnablerController(t *testing.T) {
 
 			assertSA(t, cl)
 			assertClusterRoleBinding(t, cl)
+			assertOAuthClient(t, cl)
 		})
 
-		t.Run("without ToolChainEnabler Custom Resource", func(t *testing.T) {
+		t.Run("without ToolChainEnabler custom resource", func(t *testing.T) {
 			//given
 			// Create a fake client to mock API calls without any runtime object
 			cl := client.NewClient(fake.NewFakeClient())
@@ -147,6 +173,30 @@ func TestToolChainEnablerController(t *testing.T) {
 
 		})
 
+		t.Run("fail", func(t *testing.T) {
+			//given
+			errMsg := "something went wrong while getting sa"
+			m := make(map[string]string)
+			m["sa"] = errMsg
+
+			cl := NewDummyClient(client.NewClient(fake.NewFakeClient(objs...)), m)
+
+			// Create a ReconcileToolChainEnabler object with the scheme and fake client.
+			r := &ReconcileToolChainEnabler{client: cl, scheme: s}
+
+			req := reconcileRequest(Name)
+
+			instance := &codereadyv1alpha1.ToolChainEnabler{}
+			err := r.client.Get(context.TODO(), req.NamespacedName, instance)
+			require.NoError(t, err)
+
+			//when
+			err = r.ensureSA(instance)
+
+			//then
+			assert.EqualError(t, err, fmt.Sprintf("failed to get service account %s: %s", SAName, errMsg))
+		})
+
 	})
 
 	t.Run("ClusterRoleBinding", func(t *testing.T) {
@@ -198,6 +248,31 @@ func TestToolChainEnablerController(t *testing.T) {
 
 			require.NoError(t, err, "failed to ensure ClusterRoleBinding %s", CRBName)
 			assertClusterRoleBinding(t, cl)
+		})
+
+		t.Run("fail", func(t *testing.T) {
+			//given
+			errMsg := "something went wrong while getting clusterrolebinding"
+			m := make(map[string]string)
+			m["crb"] = errMsg
+
+			cl := NewDummyClient(client.NewClient(fake.NewFakeClient(objs...)), m)
+
+			// Create a ReconcileToolChainEnabler object with the scheme and fake client.
+			r := &ReconcileToolChainEnabler{client: cl, scheme: s}
+
+			// Mock request to simulate Reconcile() being called on an event for a
+			// watched resource .
+			req := reconcileRequest(Name)
+
+			instance := &codereadyv1alpha1.ToolChainEnabler{}
+			err := r.client.Get(context.TODO(), req.NamespacedName, instance)
+			require.NoError(t, err)
+
+			err = r.ensureClusterRoleBinding(instance, SAName, Namespace)
+
+			//then
+			assert.EqualError(t, err, fmt.Sprintf("failed to get clusterrolebinding %s: %s", CRBName, errMsg))
 		})
 	})
 
@@ -255,6 +330,29 @@ func TestToolChainEnablerController(t *testing.T) {
 			require.NoError(t, err, "failed to ensure OAuthClient %s", OAuthClientName)
 			assertOAuthClient(t, cl)
 		})
+
+		t.Run("fail", func(t *testing.T) {
+			//given
+			errMsg := "something went wrong while getting oauthclient"
+			m := make(map[string]string)
+			m["oc"] = errMsg
+
+			cl := NewDummyClient(client.NewClient(fake.NewFakeClient(objs...)), m)
+
+			// Create a ReconcileToolChainEnabler object with the scheme and fake client.
+			r := &ReconcileToolChainEnabler{client: cl, scheme: s}
+
+			req := reconcileRequest(Name)
+
+			instance := &codereadyv1alpha1.ToolChainEnabler{}
+			err := r.client.Get(context.TODO(), req.NamespacedName, instance)
+			require.NoError(t, err)
+
+			//when
+			err = r.ensureOAuthClient(instance)
+			//then
+			assert.Error(t, err, "failed to get oauthclient %s: %s", OAuthClientName, errMsg)
+		})
 	})
 }
 
@@ -310,4 +408,34 @@ func reconcileRequest(name string) reconcile.Request {
 			Namespace: Namespace,
 		},
 	}
+}
+
+type DummyClient struct {
+	client.Client
+	resources map[string]string
+}
+
+func NewDummyClient(k8sClient client.Client, opts map[string]string) client.Client {
+	return &DummyClient{k8sClient, opts}
+}
+
+func (d *DummyClient) GetServiceAccount(namespace, name string) (*v1.ServiceAccount, error) {
+	if msg, ok := d.resources["sa"]; ok {
+		return nil, errors.New(msg)
+	}
+	return d.Client.GetServiceAccount(namespace, name)
+}
+
+func (d *DummyClient) GetClusterRoleBinding(name string) (*rbacv1.ClusterRoleBinding, error) {
+	if msg, ok := d.resources["crb"]; ok {
+		return nil, errors.New(msg)
+	}
+	return d.Client.GetClusterRoleBinding(name)
+}
+
+func (d *DummyClient) GetOAuthClient(name string) (*oauthv1.OAuthClient, error) {
+	if msg, ok := d.resources["oc"]; ok {
+		return nil, errors.New(msg)
+	}
+	return d.Client.GetOAuthClient(name)
 }
