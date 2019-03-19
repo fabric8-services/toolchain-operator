@@ -115,9 +115,9 @@ func TestToolChainEnablerController(t *testing.T) {
 			assert.Error(t, err, "failed to get not found error")
 			assert.Nil(t, sa, "found sa %s", SAName)
 
-			actual, err := cl.GetClusterRoleBinding(CRBName)
+			actual, err := cl.GetClusterRoleBinding(SelfProvisioner)
 			assert.Error(t, err, "failed to get not found error")
-			assert.Nil(t, actual, "found ClusterRoleBinding %s", CRBName)
+			assert.Nil(t, actual, "found ClusterRoleBinding %s", SelfProvisioner)
 		})
 
 	})
@@ -240,13 +240,13 @@ func TestToolChainEnablerController(t *testing.T) {
 			// create ClusterRolebinding first time
 			err = r.ensureClusterRoleBinding(instance, SAName, Namespace)
 
-			require.NoError(t, err, "failed to create ClusterRoleBinding %s", CRBName)
+			require.NoError(t, err, "failed to create ClusterRoleBinding %s", SelfProvisioner)
 			assertClusterRoleBinding(t, cl)
 
 			// when
 			err = r.ensureClusterRoleBinding(instance, SAName, Namespace)
 
-			require.NoError(t, err, "failed to ensure ClusterRoleBinding %s", CRBName)
+			require.NoError(t, err, "failed to ensure ClusterRoleBinding %s", SelfProvisioner)
 			assertClusterRoleBinding(t, cl)
 		})
 
@@ -272,7 +272,7 @@ func TestToolChainEnablerController(t *testing.T) {
 			err = r.ensureClusterRoleBinding(instance, SAName, Namespace)
 
 			//then
-			assert.EqualError(t, err, fmt.Sprintf("failed to get clusterrolebinding %s: %s", CRBName, errMsg))
+			assert.EqualError(t, err, fmt.Sprintf("failed to get clusterrolebinding %s: %s", SelfProvisioner, errMsg))
 		})
 	})
 
@@ -365,8 +365,8 @@ func assertSA(t *testing.T, cl client.Client) {
 
 func assertClusterRoleBinding(t *testing.T, cl client.Client) {
 	// Check Service Account has self-provision ClusterRole
-	actual, err := cl.GetClusterRoleBinding(CRBName)
-	assert.NoError(t, err, "couldn't find ClusterRoleBinding %s", CRBName)
+	actual, err := cl.GetClusterRoleBinding(SelfProvisioner)
+	assert.NoError(t, err, "couldn't find ClusterRoleBinding %s", SelfProvisioner)
 	assert.NotNil(t, actual)
 
 	subs := []rbacv1.Subject{
@@ -385,6 +385,20 @@ func assertClusterRoleBinding(t *testing.T, cl client.Client) {
 
 	assert.Equal(t, actual.Subjects, subs)
 	assert.Equal(t, actual.RoleRef, roleRef)
+
+	// Check Service Account has dsaas-cluster-admin ClusterRole
+	dsaasClusterAdmin, err := cl.GetClusterRoleBinding(DsaasClusterAdmin)
+	assert.NoError(t, err, "couldn't find ClusterRoleBinding %s", DsaasClusterAdmin)
+	assert.NotNil(t, dsaasClusterAdmin)
+
+	dsaasClusterAdminRoleRef := rbacv1.RoleRef{
+		APIGroup: "rbac.authorization.k8s.io",
+		Kind:     "ClusterRole",
+		Name:     "dsaas-cluster-admin",
+	}
+
+	assert.Equal(t, subs, dsaasClusterAdmin.Subjects)
+	assert.Equal(t, dsaasClusterAdminRoleRef, dsaasClusterAdmin.RoleRef)
 }
 
 func assertOAuthClient(t *testing.T, cl client.Client) {

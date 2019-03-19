@@ -1,27 +1,12 @@
+# copied from https://github.com/openshift/online/blob/master/ansible/roles/oso_dsaas_admin_osio/files/dsaas-cluster-admin.json
+# used oc convert -f your_file > deploy/dsaas_cluster_admin_cluster_role.yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: toolchain-enabler
+  annotations:
+    authorization.openshift.io/system-only: "true"
+  name: dsaas-cluster-admin
 rules:
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - clusterrolebindings
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
-  - project.openshift.io
-  resources:
-  - projectrequests
-  verbs:
-  - create
-- apiGroups:
-  - codeready.io
-  resources:
-  - toolchainenablers/finalizers
-  verbs:
-  - update
 - apiGroups:
   - ""
   - oauth.openshift.io

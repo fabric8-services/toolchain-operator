@@ -39,23 +39,23 @@ func waitForServiceAccount(t *testing.T, operatorClient client.Client, namespace
 	})
 }
 
-func waitForClusterRoleBinding(t *testing.T, operatorClient client.Client) error {
+func waitForClusterRoleBinding(t *testing.T, operatorClient client.Client, name string) error {
 	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		crb, err := operatorClient.GetClusterRoleBinding(toolchainenabler.CRBName)
+		crb, err := operatorClient.GetClusterRoleBinding(name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				t.Logf("Waiting for availability of %s cluster role binding\n", toolchainenabler.CRBName)
+				t.Logf("Waiting for availability of %s cluster role binding\n", name)
 				return false, nil
 			}
 			return false, err
 		}
 
 		if crb != nil {
-			t.Logf("Found cluster role binding %s \n", toolchainenabler.CRBName)
+			t.Logf("Found cluster role binding %s \n", name)
 			return true, nil
 		}
 
-		t.Logf("Waiting for cluster role binding %s \n", toolchainenabler.CRBName)
+		t.Logf("Waiting for cluster role binding %s \n", name)
 		return false, nil
 	})
 }

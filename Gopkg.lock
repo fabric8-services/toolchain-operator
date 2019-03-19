@@ -264,6 +264,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:4244266b65ea535b8ebd109a327720821707b59f9a37bda738946d52ec69442d"
+  name = "github.com/magiconair/properties"
+  packages = ["assert"]
+  pruneopts = "NT"
+  revision = "c2353362d570a7bfa228149c62842019201cfb71"
+  version = "v1.8.0"
+
+[[projects]]
   branch = "master"
   digest = "1:7d9fcac7f1228470c4ea0ee31cdfb662a758c44df691e39b3e76c11d3e12ba8f"
   name = "github.com/mailru/easyjson"
@@ -319,7 +327,10 @@
   branch = "master"
   digest = "1:4dfdbbcff324f5b69fd05d3aa063669e05b9c72c981c1fe730b6efcfc84b9798"
   name = "github.com/openshift/api"
-  packages = ["oauth/v1"]
+  packages = [
+    "oauth/v1",
+    "route/v1",
+  ]
   pruneopts = "NT"
   revision = "677153041bd22c1aa01fef67b68a8502ab1333d5"
 
@@ -947,7 +958,9 @@
   analyzer-version = 1
   input-imports = [
     "github.com/fzipp/gocyclo",
+    "github.com/magiconair/properties/assert",
     "github.com/openshift/api/oauth/v1",
+    "github.com/openshift/api/route/v1",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/ready",
@@ -958,6 +971,7 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/wadey/gocovmerge",
+    "golang.org/x/net/context",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
     "k8s.io/apimachinery/pkg/api/errors",
@@ -965,8 +979,8 @@
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",
+    "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/apimachinery/pkg/util/wait",
-    "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/code-generator/cmd/client-gen",

@@ -83,20 +83,33 @@ func TestToolChainEnabler(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("delete cluster role binding and verify", func(t *testing.T) {
+	t.Run("delete self-provisioner cluster role binding and verify", func(t *testing.T) {
 		// given
-		clusterRoleBinding, err := operatorClient.GetClusterRoleBinding(toolchainenabler.CRBName)
+		clusterRoleBinding, err := operatorClient.GetClusterRoleBinding(toolchainenabler.SelfProvisioner)
 		require.NoError(t, err)
 
 		// when
 		err = operatorClient.Delete(context.Background(), clusterRoleBinding)
-		require.NoError(t, err, "failed to delete cluster role binding %s", toolchainenabler.CRBName)
+		require.NoError(t, err, "failed to delete cluster role binding %s", toolchainenabler.SelfProvisioner)
 
 		// then
 		err = verifyResources(t, operatorClient, namespace)
 		assert.NoError(t, err)
 	})
 
+	t.Run("delete dsaas-cluster-admin cluster role binding and verify", func(t *testing.T) {
+		// given
+		clusterRoleBinding, err := operatorClient.GetClusterRoleBinding(toolchainenabler.DsaasClusterAdmin)
+		require.NoError(t, err)
+
+		// when
+		err = operatorClient.Delete(context.Background(), clusterRoleBinding)
+		require.NoError(t, err, "failed to delete cluster role binding %s", toolchainenabler.DsaasClusterAdmin)
+
+		// then
+		err = verifyResources(t, operatorClient, namespace)
+		assert.NoError(t, err)
+	})
 	t.Run("delete sa and verify", func(t *testing.T) {
 		// given
 		sa, err := operatorClient.GetServiceAccount(namespace, toolchainenabler.SAName)
@@ -117,7 +130,11 @@ func verifyResources(t *testing.T, operatorClient client.Client, namespace strin
 		return err
 	}
 
-	if err := waitForClusterRoleBinding(t, operatorClient); err != nil {
+	if err := waitForClusterRoleBinding(t, operatorClient, toolchainenabler.SelfProvisioner); err != nil {
+		return err
+	}
+
+	if err := waitForClusterRoleBinding(t, operatorClient, toolchainenabler.DsaasClusterAdmin); err != nil {
 		return err
 	}
 
