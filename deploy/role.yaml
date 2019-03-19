@@ -34,6 +34,13 @@ rules:
   - get
   - create
 - apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - create
+  - delete
+- apiGroups:
   - codeready.io
   resources:
   - '*'

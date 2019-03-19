@@ -50,6 +50,18 @@ required = [
   # The version rule is used for a specific release and the master branch for in between releases.
   version = "=v0.4.0" #osdk_version_annotation
 
+[[constraint]]
+  branch = "master"
+  name = "github.com/fabric8-services/fabric8-cluster-client"
+
+[[constraint]]
+  name = "github.com/fabric8-services/fabric8-common"
+  revision = "988ec38ba27dc10cc955f19cce227e7cd8d58528"
+
+[[constraint]]
+  name = "gopkg.in/h2non/gock.v1"
+  version = "1.0.14"
+
 [prune]
   go-tests = true
   non-go = true

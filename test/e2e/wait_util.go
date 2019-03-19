@@ -2,7 +2,7 @@ package e2e
 
 import (
 	"github.com/fabric8-services/toolchain-operator/pkg/client"
-	"github.com/fabric8-services/toolchain-operator/pkg/controller/toolchainenabler"
+	"github.com/fabric8-services/toolchain-operator/pkg/config"
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -20,21 +20,21 @@ const (
 
 func waitForServiceAccount(t *testing.T, operatorClient client.Client, namespace string) error {
 	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		sa, err := operatorClient.GetServiceAccount(namespace, toolchainenabler.SAName)
+		sa, err := operatorClient.GetServiceAccount(namespace, config.SAName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				t.Logf("Waiting for availability of service account %s in namespace %s \n", toolchainenabler.SAName, namespace)
+				t.Logf("Waiting for availability of service account %s in namespace %s \n", config.SAName, namespace)
 				return false, nil
 			}
 			return false, err
 		}
 
 		if sa != nil {
-			t.Logf("Found service account %s in namespace %s \n", toolchainenabler.SAName, namespace)
+			t.Logf("Found service account %s in namespace %s \n", config.SAName, namespace)
 			return true, nil
 		}
 
-		t.Logf("Waiting for service account %s \n", toolchainenabler.SAName)
+		t.Logf("Waiting for service account %s \n", config.SAName)
 		return false, nil
 	})
 }
@@ -62,20 +62,20 @@ func waitForClusterRoleBinding(t *testing.T, operatorClient client.Client, name 
 
 func waitForOauthClient(t *testing.T, operatorClient client.Client) error {
 	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		oc, err := operatorClient.GetOAuthClient(toolchainenabler.OAuthClientName)
+		oc, err := operatorClient.GetOAuthClient(config.OAuthClientName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				t.Logf("Waiting for availability of oauth client %s \n", toolchainenabler.OAuthClientName)
+				t.Logf("Waiting for availability of oauth client %s \n", config.OAuthClientName)
 				return false, nil
 			}
 			return false, err
 		}
 
 		if !reflect.DeepEqual(oauthv1.OAuthClient{}, *oc) {
-			t.Logf("Found oauth client %s \n", toolchainenabler.OAuthClientName)
+			t.Logf("Found oauth client %s \n", config.OAuthClientName)
 			return true, nil
 		}
-		t.Logf("Waiting for availability of %s oauth client \n", toolchainenabler.OAuthClientName)
+		t.Logf("Waiting for availability of %s oauth client \n", config.OAuthClientName)
 		return false, nil
 	})
 }

@@ -62,6 +62,26 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 
 ---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: toolchain
+type: Opaque
+data:
+  tc.client.id: YmI2ZDA0M2QtZjI0My00NThmLTg0OTgtMmMxOGExMmRjZjQ3Cg==
+  tc.client.secret: c2VjcmV0Cg==
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: toolchain
+data:
+  auth.url: https://auth.openshift.io
+  cluster.url: https://cluster.openshift.io
+  cluster.name: "dsaas-stage" # this is temporary workaround until we have some way to figure our how to get cluster name
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -105,3 +125,28 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "toolchain-enabler"
+            - name: AUTH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: toolchain
+                  key: auth.url
+            - name: CLUSTER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: toolchain
+                  key: cluster.url
+            - name: CLUSTER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: toolchain
+                  key: cluster.name
+            - name: TC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: toolchain
+                  key: tc.client.id
+            - name: TC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: toolchain
+                  key: tc.client.secret

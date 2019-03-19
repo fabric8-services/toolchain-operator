@@ -16,14 +16,14 @@ func TestRoutingSubDomain(t *testing.T) {
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	cl := client.NewClient(fake.NewFakeClient())
-	informer := NewInformer(cl, "test-informer")
+	i := configInformer{cl, "test-configInformer", "test-cluster"}
 
 	// when
-	sd, err := informer.routingSubDomain(withRouteHost("foo-dipakpawar231.8a09.starter-us-east-2.openshiftapps.com"))
+	sd, err := routingSubDomain(i, withRouteHost("foo-dipakpawar231.8a09.starter-us-east-2.openshiftapps.com"))
 
 	//then
 	require.NoError(t, err)
-	_, err = cl.GetRoute("test-informer", RouteName)
+	_, err = cl.GetRoute("test-configInformer", RouteName)
 	require.Error(t, err, "couldn't delete route")
 	require.EqualError(t, err, "routes.route.openshift.io \"toolchain-route\" not found")
 

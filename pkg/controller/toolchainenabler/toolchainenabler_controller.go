@@ -11,6 +11,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 
+	clusterclient "github.com/fabric8-services/fabric8-cluster-client/cluster"
+	"github.com/fabric8-services/fabric8-common/httpsupport"
+	"github.com/fabric8-services/toolchain-operator/pkg/cluster"
+	"github.com/fabric8-services/toolchain-operator/pkg/config"
 	"github.com/fabric8-services/toolchain-operator/pkg/secret"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	errs "github.com/pkg/errors"
@@ -24,14 +28,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 )
 
 var log = logf.Log.WithName("controller_toolchainenabler")
 
 const (
-	Name              = "toolchain-enabler"
-	SAName            = "toolchain-sre"
-	OAuthClientName   = "codeready-toolchain"
 	SelfProvisioner   = "system:toolchain-sre:self-provisioner"
 	DsaasClusterAdmin = "system:toolchain-sre:dsaas-cluster-admin"
 )
@@ -39,12 +41,20 @@ const (
 // Add creates a new ToolChainEnabler Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+	reconciler, err := newReconciler(mgr)
+	if err != nil {
+		return err
+	}
+	return add(mgr, reconciler)
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileToolChainEnabler{client: client.NewClient(mgr.GetClient()), scheme: mgr.GetScheme()}
+func newReconciler(mgr manager.Manager) (reconcile.Reconciler, error) {
+	c, err := config.NewConfiguration()
+	if err != nil {
+		return nil, errs.Wrapf(err, "something went wrong while creating configuration")
+	}
+	return &ReconcileToolChainEnabler{client: client.NewClient(mgr.GetClient()), scheme: mgr.GetScheme(), config: c}, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -85,6 +95,7 @@ type ReconcileToolChainEnabler struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	config *config.Configuration
 }
 
 // Reconcile reads that state of the cluster for a ToolChainEnabler object and makes changes based on the state read
@@ -126,7 +137,7 @@ func (r *ReconcileToolChainEnabler) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	if err := r.ensureClusterRoleBinding(instance, SAName, instance.Namespace); err != nil {
+	if err := r.ensureClusterRoleBinding(instance, config.SAName, instance.Namespace); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -134,15 +145,26 @@ func (r *ReconcileToolChainEnabler) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("Skipping reconcile as all required objects are created and exist", "Service Account", SAName, "ClusterRoleBindning", SelfProvisioner, "OAuthClient", OAuthClientName)
+	clusterData, err := r.clusterInfo(namespacedName.Namespace)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.saveClusterConfiguration(clusterData); err != nil {
+		log.Error(err, "failed to save cluster configuration in cluster service", "cluster_service_url", r.config.GetClusterServiceURL())
+		// requeue after 5 seconds if failed while calling remote cluster service
+		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+
+	reqLogger.Info("Skipping reconcile as cluster configuration has been updated to cluster management service successfully")
 	return reconcile.Result{}, nil
 }
 
 // ensureSA creates Service Account if not exists
-func (r *ReconcileToolChainEnabler) ensureSA(tce *codereadyv1alpha1.ToolChainEnabler) error {
+func (r ReconcileToolChainEnabler) ensureSA(tce *codereadyv1alpha1.ToolChainEnabler) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      SAName,
+			Name:      config.SAName,
 			Namespace: tce.Namespace,
 		},
 	}
@@ -152,19 +174,19 @@ func (r *ReconcileToolChainEnabler) ensureSA(tce *codereadyv1alpha1.ToolChainEna
 		return err
 	}
 
-	if _, err := r.client.GetServiceAccount(tce.Namespace, SAName); err != nil {
+	if _, err := r.client.GetServiceAccount(tce.Namespace, config.SAName); err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("creating a new service sccount ", "namespace", sa.Namespace, "name", sa.Name)
 			if err := r.client.CreateServiceAccount(sa); err != nil {
 				return err
 			}
 
-			log.Info(fmt.Sprintf("service account %s created successfully", SAName))
+			log.Info(fmt.Sprintf("service account %s created successfully", config.SAName))
 			return nil
 		}
-		return errs.Wrapf(err, "failed to get service account %s", SAName)
+		return errs.Wrapf(err, "failed to get service account %s", config.SAName)
 	}
-	log.Info(fmt.Sprintf("service account %s already exists", SAName))
+	log.Info(fmt.Sprintf("service account %s already exists", config.SAName))
 
 	return nil
 }
@@ -265,7 +287,7 @@ func (r *ReconcileToolChainEnabler) bindDsaasClusterAdminRole(tce *codereadyv1al
 }
 
 // ensureOAuthClient creates OAuthClient if not exists
-func (r *ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.ToolChainEnabler) error {
+func (r ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.ToolChainEnabler) error {
 	randomString, err := secret.CreateRandomString(256)
 	if err != nil {
 		return errs.Wrapf(err, "failed to generate random string to be used as secret for oauthclient")
@@ -273,7 +295,7 @@ func (r *ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.Too
 	var ageSeconds int32
 	oc := &oauthv1.OAuthClient{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: OAuthClientName,
+			Name: config.OAuthClientName,
 		},
 		Secret:                   randomString,
 		GrantMethod:              oauthv1.GrantHandlerAuto,
@@ -286,20 +308,30 @@ func (r *ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.Too
 		return err
 	}
 
-	if _, err = r.client.GetOAuthClient(OAuthClientName); err != nil {
+	if _, err = r.client.GetOAuthClient(config.OAuthClientName); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("creating", "oauthclient", OAuthClientName)
+			log.Info("creating", "oauthclient", config.OAuthClientName)
 			if err := r.client.CreateOAuthClient(oc); err != nil {
 				return err
 			}
 
-			log.Info(fmt.Sprintf("oauth client %s created successfully", OAuthClientName))
+			log.Info(fmt.Sprintf("oauth client %s created successfully", config.OAuthClientName))
 			return nil
 		}
-		return errs.Wrapf(err, "failed to get oauthclient %s", OAuthClientName)
+		return errs.Wrapf(err, "failed to get oauthclient %s", config.OAuthClientName)
 	}
 
-	log.Info(fmt.Sprintf("oauth client %s already exists", OAuthClientName))
+	log.Info(fmt.Sprintf("oauth client %s already exists", config.OAuthClientName))
 
 	return nil
+}
+
+func (r ReconcileToolChainEnabler) clusterInfo(ns string, options ...cluster.SASecretOption) (*clusterclient.CreateClusterData, error) {
+	i := cluster.NewConfigInformer(r.client, ns, r.config.GetClusterName())
+	return i.Inform(options...)
+}
+
+func (r ReconcileToolChainEnabler) saveClusterConfiguration(data *clusterclient.CreateClusterData, options ...httpsupport.HTTPClientOption) error {
+	service := cluster.NewClusterService(r.config)
+	return service.CreateCluster(context.Background(), data, options...)
 }

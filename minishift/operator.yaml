@@ -40,3 +40,28 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "toolchain-enabler"
+            - name: AUTH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: toolchain
+                  key: auth.url
+            - name: CLUSTER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: toolchain
+                  key: cluster.url
+            - name: CLUSTER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: toolchain
+                  key: cluster.name
+            - name: TC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: toolchain
+                  key: tc.client.id
+            - name: TC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: toolchain
+                  key: tc.client.secret

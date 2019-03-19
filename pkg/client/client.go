@@ -22,6 +22,7 @@ type Client interface {
 // Secret contains methods for manipulating Secrets
 type Secret interface {
 	GetSecret(namespace, name string) (*v1.Secret, error)
+	CreateSecret(*v1.Secret) error
 }
 
 // ServiceAccount contains methods for manipulating ServiceAccounts.
@@ -130,4 +131,9 @@ func (c *clientImpl) GetSecret(namespace, name string) (*v1.Secret, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+// CreateSecret creates the Secret.
+func (c *clientImpl) CreateSecret(s *v1.Secret) error {
+	return c.Client.Create(context.Background(), s)
 }
