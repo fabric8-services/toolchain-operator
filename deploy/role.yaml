@@ -8,31 +8,15 @@ rules:
   - ""
   resources:
   - pods
-  - services
-  - endpoints
-  - persistentvolumeclaims
   - events
   - configmaps
   - secrets
   - serviceaccounts
   verbs:
-  - '*'
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  - daemonsets
-  - replicasets
-  - statefulsets
-  verbs:
-  - '*'
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - servicemonitors
-  verbs:
-  - get
   - create
+  - get
+  - list
+  - watch
 - apiGroups:
   - route.openshift.io
   resources:
@@ -43,6 +27,12 @@ rules:
 - apiGroups:
   - codeready.io
   resources:
-  - '*'
+  - toolchainenablers
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

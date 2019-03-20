@@ -22,7 +22,10 @@ rules:
   resources:
   - clusterrolebindings
   verbs:
-  - '*'
+  - create
+  - get
+  - list
+  - watch
 - apiGroups:
   - ""
   - project.openshift.io

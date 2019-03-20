@@ -82,6 +82,8 @@ clean-resources:
 	@oc delete oauthclient codeready-toolchain || true
 	@echo "Deleting Secret"
 	@oc delete -f $(DEPLOY_DIR)/operator.config.yaml || true
+	@echo "Deleting dsaas-cluster-admin ClusterRole"
+	@oc delete -f $(DEPLOY_DIR)/dsaas_cluster_admin_cluster_role.yaml || true
 
 .PHONY: deploy-operator
 deploy-operator: build build-image deploy-operator-only
