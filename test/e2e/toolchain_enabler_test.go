@@ -22,7 +22,7 @@ func TestToolChainEnabler(t *testing.T) {
 	toolChainEnablerList := &codereadyv1alpha1.ToolChainEnablerList{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ToolChainEnabler",
-			APIVersion: "codeready.io/v1alpha1",
+			APIVersion: "codeready.openshift.io/v1alpha1",
 		},
 	}
 	err := framework.AddToFrameworkScheme(apis.AddToScheme, toolChainEnablerList)
@@ -52,7 +52,7 @@ func TestToolChainEnabler(t *testing.T) {
 	exampleToolChainEnabler := &codereadyv1alpha1.ToolChainEnabler{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ToolChainEnabler",
-			APIVersion: "codeready.io/v1alpha1",
+			APIVersion: "codeready.openshift.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "example-toolchainenabler",

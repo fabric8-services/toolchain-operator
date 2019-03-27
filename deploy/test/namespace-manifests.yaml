@@ -32,7 +32,7 @@ rules:
   - create
   - delete
 - apiGroups:
-  - codeready.io
+  - codeready.openshift.io
   resources:
   - toolchainenablers
   verbs:

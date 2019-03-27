@@ -20,7 +20,7 @@ rules:
   verbs:
   - create
 - apiGroups:
-  - codeready.io
+  - codeready.openshift.io
   resources:
   - toolchainenablers/finalizers
   verbs:

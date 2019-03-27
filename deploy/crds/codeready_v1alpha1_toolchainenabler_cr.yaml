@@ -1,5 +1,5 @@
 # Todo: We may remove this in future if not needed at all
-apiVersion: codeready.io/v1alpha1
+apiVersion: codeready.openshift.io/v1alpha1
 kind: ToolChainEnabler
 metadata:
   name: example-toolchainenabler
