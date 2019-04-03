@@ -1,0 +1,224 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    capabilities: Basic Install
+  name: toolchain-enabler.v0.0.1
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: Represent a Toolchain Enabler
+      displayName: toolchainenabler
+      kind: ToolChainEnabler
+      name: toolchainenablers.codeready.openshift.io
+      version: v1alpha1
+  description: Operator to enable CodeReady Toolchain on OSD clusters
+  displayName: Toolchain Operator
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterrolebindings
+          verbs:
+          - create
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ''
+          - project.openshift.io
+          resources:
+          - projectrequests
+          verbs:
+          - create
+        - apiGroups:
+          - codeready.openshift.io
+          resources:
+          - toolchainenablers/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - ''
+          - oauth.openshift.io
+          resources:
+          - oauthclients
+          - limitranges
+          - resourcequotas
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - ''
+          - authorization.openshift.io
+          resources:
+          - rolebindingrestrictions
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - ''
+          - build.openshift.io
+          resources:
+          - builds
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ''
+          - apps.openshift.io
+          resources:
+          - deploymentconfigs
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ''
+          resources:
+          - resourcequotas
+          - limitranges
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        serviceAccountName: toolchain-enabler
+      deployments:
+      - name: toolchain-enabler
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: toolchain-enabler
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: toolchain-enabler
+            spec:
+              containers:
+              - env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: AUTH_URL
+                  valueFrom:
+                    configMapKeyRef:
+                      key: auth.url
+                      name: toolchain
+                - name: CLUSTER_URL
+                  valueFrom:
+                    configMapKeyRef:
+                      key: cluster.url
+                      name: toolchain
+                - name: CLUSTER_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      key: cluster.name
+                      name: toolchain
+                - name: TC_CLIENT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      key: tc.client.id
+                      name: toolchain
+                - name: TC_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      key: tc.client.secret
+                      name: toolchain
+                image: quay.io/openshiftio/toolchain-operator:latest
+                imagePullPolicy: Always
+                name: toolchain-enabler
+                ports:
+                - containerPort: 60000
+                  name: metrics
+                readinessProbe:
+                  exec:
+                    command:
+                    - stat
+                    - /tmp/operator-sdk-ready
+                  failureThreshold: 1
+                  initialDelaySeconds: 4
+                  periodSeconds: 10
+                resources: {}
+              serviceAccountName: toolchain-enabler
+      permissions:
+      - rules:
+        - apiGroups:
+          - ''
+          resources:
+          - pods
+          - events
+          - configmaps
+          - secrets
+          - serviceaccounts
+          verbs:
+          - create
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          verbs:
+          - create
+          - delete
+        - apiGroups:
+          - codeready.openshift.io
+          resources:
+          - toolchainenablers
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        serviceAccountName: toolchain-enabler
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  maintainers:
+  - email: devtools@redhat.com
+    name: Developer Tools
+  maturity: alpha
+  provider:
+    name: Red Hat, Inc.
+  version: 0.0.1

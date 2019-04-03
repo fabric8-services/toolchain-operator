@@ -1,0 +1,4 @@
+channels:
+- currentCSV: toolchain-enabler.v0.0.2
+  name: alpha
+packageName: toolchain-operator

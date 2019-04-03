@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: olm-artifacts-template
+
+parameters:
+- name: REGISTRY_IMG
+  required: true
+- name: CHANNEL
+  value: staging
+- name: IMAGE_TAG
+  value: latest
+- name: TC_CLIENT_ID
+  required: true
+- name: TC_CLIENT_SECRET
+  required: true
+
+objects:
+- apiVersion: operators.coreos.com/v1alpha1
+  kind: CatalogSource
+  metadata:
+    name: toolchain-catalog
+  spec:
+    sourceType: grpc
+    image: ${REGISTRY_IMG}:${CHANNEL}-${IMAGE_TAG}
+    displayName: Toolchain Registry
+    publisher: Toolchain Developer
+
+- apiVersion: operators.coreos.com/v1alpha2
+  kind: OperatorGroup
+  metadata:
+    name: toolchain-og
+  spec:
+    targetNamespaces:
+    - toolchain-manager
+
+- apiVersion: operators.coreos.com/v1alpha1
+  kind: Subscription
+  metadata:
+    name: toolchain
+  spec:
+    channel: ${CHANNEL}
+    name: toolchain-operator
+    source: toolchain-catalog
+    sourceNamespace: toolchain-manager
+
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: toolchain
+  type: Opaque
+  stringData:
+    tc.client.id: ${TC_CLIENT_ID}
+    tc.client.secret: ${TC_CLIENT_SECRET}
+
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: toolchain
+  data:
+    auth.url: https://auth.openshift.io
+    cluster.url: https://cluster.openshift.io
+    cluster.name: "dsaas-stage" # this is workaround to run tests on minishift

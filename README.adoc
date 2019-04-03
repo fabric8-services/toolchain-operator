@@ -207,4 +207,39 @@ To format the code:
 ```
 $ make format-go-code
 ```
+== Running on Minishift(v1.25.0)
 
+=== Start minishift and logged in as cluster-admin
+```
+minishift start --cpus 4 --memory 8GB
+
+oc login -u system:admin
+```
+
+=== Installing OLM
+
+```
+oc apply -f https://raw.githubusercontent.com/operator-framework/operator-lifecycle-manager/master/deploy/upstream/quickstart/olm.yaml
+```
+
+:cluster: minishift
+include::docs/set_env_build_push_registry.adoc[]
+
+include::docs/run_operator_using_olm.adoc[]
+
+
+== Running in Openshift 4.x
+
+To ship `toolchain-operator` from marketplace, we are bundling operator manifests with our own registry, where cluster-admin can create CatalogSource if needed and find our operator in operator catalogs.
+
+We don't want to ship our operator to every cluster by default, this is why we are not going with default operatorsources which creates catalogsource for Community, RedHat, Certified operator registry.
+
+:cluster: openshift
+include::docs/set_env_build_push_registry.adoc[]
+
+=== Login as cluster-admin
+
+Make sure that you have logged in as cluster-admin to do following steps.
+
+:cluster: openshift
+include::docs/run_operator_using_olm.adoc[]

@@ -1,0 +1,19 @@
+[id='registry-{cluster}']
+
+=== Create, verify and push updated manifests to Registry
+
+==== Set Environment Variable
+```
+export NAMESPACE=toolchain-manager
+export REGISTRY_IMG=quay.io/<your_username>/toolchain-registry
+export CHANNEL=alpha
+export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+export TC_CLIENT_ID=bb6d043d-f243-458f-8498-2c18a12dcf47
+export TC_CLIENT_SECRET=secret
+```
+
+==== Build and push registry image
+```
+docker build -t ${REGISTRY_IMG}:${CHANNEL}-${IMAGE_TAG} -f Dockerfile.registry .
+docker push ${REGISTRY_IMG}:${CHANNEL}-${IMAGE_TAG}
+```

@@ -40,7 +40,9 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "toolchain-enabler"
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: AUTH_URL
               valueFrom:
                 configMapKeyRef:

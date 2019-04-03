@@ -1,0 +1,152 @@
+[id='operator-{cluster}']
+=== Create a Project
+```
+oc new-project ${NAMESPACE}
+```
+
+=== Create CatalogSource, Subscription, OperatorGroup, Secrets, ConfigMap
+```
+oc process -f hack/olm-registry/olm-artifacts-template.yaml \
+    -p REGISTRY_IMG=$REGISTRY_IMG \
+    -p CHANNEL=$CHANNEL \
+    -p IMAGE_TAG=$IMAGE_TAG \
+    -p TC_CLIENT_SECRET=$TC_CLIENT_SECRET \
+    -p TC_CLIENT_ID=$TC_CLIENT_ID | oc create -f -
+```
+
+=== Verification
+
+==== Custom Resources
+To verify that above resources has created, you can use following commands:
+
+`oc get catalogsource,subscription,operatorgroup -n ${NAMESPACE}`
+
+You should be able to see following output:
+
+```
+NAME                                                   NAME                 TYPE      PUBLISHER             AGE
+catalogsource.operators.coreos.com/toolchain-catalog   Toolchain Registry   grpc      Toolchain Developer   2m52s
+
+NAME                                          PACKAGE              SOURCE              CHANNEL
+subscription.operators.coreos.com/toolchain   toolchain-operator   toolchain-catalog   alpha
+
+NAME                                              AGE
+operatorgroup.operators.coreos.com/toolchain-og   2m53s
+```
+
+==== Service and Operator Registry
+
+Verify that there is svc, pod created by CatalogSource to serve your operator in OperatorManagement -> Operator Catalogs
+
+`oc get svc,po -n ${NAMESPACE}`
+
+You should be able to see following output:
+```
+NAME                        TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)     AGE
+service/toolchain-catalog   ClusterIP   172.30.3.180   <none>        50051/TCP   3m24s
+
+NAME                                     READY     STATUS    RESTARTS   AGE
+pod/toolchain-catalog-8b5mz              1/1       Running   0          3m24s
+pod/toolchain-enabler-64c55f5b5c-5mjpp   1/1       Running   0          2m58s
+```
+
+==== InstallPlan
+Verify that you have installplan created in namespace given by ${NAMESPACE}.
+
+`oc get installplan -n ${NAMESPACE}`
+
+You should be able to see following output:
+```
+NAME            CSV                        SOURCE    APPROVAL    APPROVED
+install-59jsv   toolchain-enabler.v0.0.1             Automatic   true
+```
+
+Make sure that it's Phase from status is complete, which means that it has created all required
+resources defined in CSV and required to run operator like, sa, {cluster}role, {cluster}rolebinding.
+
+==== SA, Role, RoleBinding, ClusterRole, ClusterRoleBinding.
+Verify all resources defined in CSV is created. you can use following command
+
+`oc get sa,role,rolebinding,clusterrole,clusterrolebinding -n ${NAMESPACE} | grep -E 'toolchain-enabler|NAME'`
+
+You should be able to see following output:
+```
+NAME                               SECRETS   AGE
+serviceaccount/toolchain-enabler   2         4m33s
+
+NAME                                                            AGE
+role.rbac.authorization.k8s.io/toolchain-enabler.v0.0.1-kqk96   4m
+
+NAME                                                                                                         AGE
+rolebinding.rbac.authorization.k8s.io/toolchain-enabler.v0.0.1-kqk96-toolchain-enabler-85j6h                 4m
+
+NAME                                                                                                         AGE
+clusterrole.rbac.authorization.k8s.io/toolchain-enabler.v0.0.1-vrt4b                                         4m
+
+NAME                                                                                                         AGE
+clusterrolebinding.rbac.authorization.k8s.io/toolchain-enabler.v0.0.1-vrt4b-toolchain-enabler-jmbdv          4m
+```
+
+==== Toolchain Operator Registry Pod and Toolchain operator deployment
+
+Verify that operator deployment is created with given replica count and it's in running state.
+`oc get deploy,po -n ${NAMESPACE}`
+
+You should be able to see following output:
+
+```
+NAME                                      READY     UP-TO-DATE   AVAILABLE   AGE
+deployment.extensions/toolchain-enabler   1/1       1            1           6m34s
+
+NAME                                     READY     STATUS    RESTARTS   AGE
+pod/toolchain-catalog-8b5mz              1/1       Running   0          7m1s
+pod/toolchain-enabler-64c55f5b5c-5mjpp   1/1       Running   0          6m35s
+```
+
+==== Create a custom resource and your operator will start executing reconcile logic
+
+```
+cat <<EOF | oc create -f -
+apiVersion: codeready.openshift.io/v1alpha1
+kind: ToolChainEnabler
+metadata:
+  name: toolchainenabler
+  namespace: ${NAMESPACE}
+spec:
+EOF
+```
+
+See for logs using
+
+`oc logs pod/toolchain-enabler-64c55f5b5c-5mjpp -f -n ${NAMESPACE}`
+
+
+=== Upgrade to new/latest version
+
+Add your new CSV under `deploy/olm-catalog/manifests/` and build and push registry image.
+
+```
+docker build -t ${REGISTRY_IMG}:${CHANNEL}-${IMAGE_TAG} -f Dockerfile.registry .
+docker push ${REGISTRY_IMG}:${CHANNEL}-${IMAGE_TAG}
+```
+
+We have an issue 'updating the image reference in a grpc CatalogSource doesn't update the pod image'. See https://jira.coreos.com/browse/OLM-955[OLM-955]
+We are using following temporary workaround:
+
+`oc delete catalogsource toolchain-catalog`
+
+```
+cat <<EOF | oc create -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: toolchain-catalog
+spec:
+  sourceType: grpc
+  image: ${REGISTRY_IMG}:${CHANNEL}-${IMAGE_TAG}
+  displayName: Toolchain Registry
+  publisher: Toolchain Developer
+EOF
+```
+
+After this you will see rollout of updated catalog and operator.
