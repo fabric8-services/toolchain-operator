@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	configv1 "github.com/openshift/api/config/v1"
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/api/core/v1"
@@ -17,6 +18,7 @@ type Client interface {
 	ClusterRoleBinding
 	OAuthClient
 	Route
+	Infrastructure
 }
 
 // Secret contains methods for manipulating Secrets
@@ -47,6 +49,11 @@ type Route interface {
 	CreateRoute(route *routev1.Route) error
 	GetRoute(namespace, name string) (*routev1.Route, error)
 	DeleteRoute(r *routev1.Route) error
+}
+
+// Infrastructure contains method for manipulating Infrastructure
+type Infrastructure interface {
+	GetInfrastructure(name string) (*configv1.Infrastructure, error)
 }
 
 // Interface assertion.
@@ -136,4 +143,13 @@ func (c *clientImpl) GetSecret(namespace, name string) (*v1.Secret, error) {
 // CreateSecret creates the Secret.
 func (c *clientImpl) CreateSecret(s *v1.Secret) error {
 	return c.Client.Create(context.Background(), s)
+}
+
+// GetInfrastructure returns the existing Infrastructure.
+func (c *clientImpl) GetInfrastructure(name string) (*configv1.Infrastructure, error) {
+	r := &configv1.Infrastructure{}
+	if err := c.Client.Get(context.Background(), types.NamespacedName{Name: name}, r); err != nil {
+		return nil, err
+	}
+	return r, nil
 }

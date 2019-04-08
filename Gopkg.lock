@@ -509,11 +509,12 @@
   digest = "1:4dfdbbcff324f5b69fd05d3aa063669e05b9c72c981c1fe730b6efcfc84b9798"
   name = "github.com/openshift/api"
   packages = [
+    "config/v1",
     "oauth/v1",
     "route/v1",
   ]
   pruneopts = "NT"
-  revision = "677153041bd22c1aa01fef67b68a8502ab1333d5"
+  revision = "1065f586bc7c919c401d5bcd334cb4a121b7314a"
 
 [[projects]]
   digest = "1:0bd15e3e708ab1ccba566b024fcf9982b51a3ab8498d53c8d416dd8f3f9b8211"
@@ -1270,6 +1271,7 @@
     "github.com/fzipp/gocyclo",
     "github.com/goadesign/goa/client",
     "github.com/magiconair/properties/assert",
+    "github.com/openshift/api/config/v1",
     "github.com/openshift/api/oauth/v1",
     "github.com/openshift/api/route/v1",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",

@@ -101,6 +101,14 @@ spec:
           - patch
           - update
           - watch
+        - apiGroups:
+          - config.openshift.io
+          resources:
+          - infrastructures
+          verbs:
+          - get
+          - list
+          - watch
         serviceAccountName: toolchain-enabler
       deployments:
       - name: toolchain-enabler

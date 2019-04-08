@@ -18,22 +18,6 @@ import (
 )
 
 func TestConfigOption(t *testing.T) {
-	t.Run("name", func(t *testing.T) {
-		// given
-		cl := client.NewClient(fake.NewFakeClient())
-		informer := configInformer{cl, "test-configInformer", "test-cluster"}
-
-		clusterData := &clusterclient.CreateClusterData{}
-		nameOption := name(informer)
-
-		// when
-		err := nameOption(clusterData)
-		require.NoError(t, err)
-
-		// then
-		assert.Equal(t, clusterData.Name, "test-cluster")
-	})
-
 	t.Run("oauth client", func(t *testing.T) {
 		// given
 		err := apis.AddToScheme(scheme.Scheme)
@@ -162,13 +146,16 @@ func TestConfigOption(t *testing.T) {
 
 	t.Run("cluster url", func(t *testing.T) {
 		// given
+		err := apis.AddToScheme(scheme.Scheme)
+		require.NoError(t, err)
+
 		cl := client.NewClient(fake.NewFakeClient())
 		informer := configInformer{cl, "test-configInformer", "test-cluster"}
 		clusterData := &clusterclient.CreateClusterData{}
-		urlOption := apiURL(informer)
+		urlOption := clusterNameAndAPIURL(informer)
 
 		// when
-		err := urlOption(clusterData)
+		err = urlOption(clusterData)
 		require.NoError(t, err)
 
 		// then
@@ -218,4 +205,25 @@ func TestConfigOption(t *testing.T) {
 		// then
 		assert.Equal(t, "OSD", clusterData.Type)
 	})
+}
+
+func TestClusterNameFromURL(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		// given
+		apiURL := "https://api.alkazako-dev11.devcluster.openshift.com:6443"
+		clusterName := extractNameFromAPIURL(apiURL)
+
+		// when
+		assert.Equal(t, clusterName, "alkazako-dev11")
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		// given
+		apiURL := "https://foo.com"
+		clusterName := extractNameFromAPIURL(apiURL)
+
+		// when
+		assert.Empty(t, clusterName)
+	})
+
 }

@@ -24,9 +24,8 @@ func NewConfigInformer(oc client.Client, ns string, clusterName string) ConfigIn
 
 func (i configInformer) Inform(options ...SASecretOption) (*clusterclient.CreateClusterData, error) {
 	return buildClusterConfiguration(
-		name(i),
 		appDNS(i),
-		apiURL(i),
+		clusterNameAndAPIURL(i),
 		oauthClient(i),
 		serviceAccount(i, options...),
 		tokenProvider(),
