@@ -34,7 +34,7 @@ create-resources:
 	@echo "Creating Secret"
 	@oc create -f $(DEPLOY_DIR)/operator.config.yaml
 	@echo "Creating dsaas-cluster-admin ClusterRole"
-	@oc create -f $(DEPLOY_DIR)/dsaas_cluster_admin_cluster_role.yaml
+	@oc create -f $(DEPLOY_DIR)/olm-catalog/manifests/0.0.2/dsaas-cluster-admin.ClusterRole.yaml
 
 .PHONY: create-cr
 create-cr:
@@ -83,7 +83,7 @@ clean-resources:
 	@echo "Deleting Secret"
 	@oc delete -f $(DEPLOY_DIR)/operator.config.yaml || true
 	@echo "Deleting dsaas-cluster-admin ClusterRole"
-	@oc delete -f $(DEPLOY_DIR)/dsaas_cluster_admin_cluster_role.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/olm-catalog/manifests/0.0.2/dsaas-cluster-admin.ClusterRole.yaml || true
 
 .PHONY: deploy-operator
 deploy-operator: build build-image deploy-operator-only
