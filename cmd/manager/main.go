@@ -9,11 +9,13 @@ import (
 
 	"github.com/fabric8-services/toolchain-operator/pkg/apis"
 	"github.com/fabric8-services/toolchain-operator/pkg/controller"
+	"github.com/fabric8-services/toolchain-operator/pkg/online_registration"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/ready"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -88,17 +90,46 @@ func main() {
 		os.Exit(1)
 	}
 
+	secondaryCache, err := cache.New(mgr.GetConfig(), cache.Options{Namespace: online_registration.Namespace, Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
+	if err != nil {
+		log.Error(fmt.Errorf("failed to create openshift-infra cache: %v", err), "")
+		os.Exit(1)
+	}
+
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := controller.AddToManager(mgr, secondaryCache); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
 
-	log.Info("Starting the Cmd.")
-
-	// Start the Cmd
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
-		log.Error(err, "manager exited non-zero")
+	if err := start(mgr, secondaryCache); err != nil {
+		log.Error(err, "")
 		os.Exit(1)
 	}
+
+}
+
+func start(mgr manager.Manager, cache cache.Cache) error {
+	stop := signals.SetupSignalHandler()
+	errChan := make(chan error)
+
+	go func() {
+		// Start secondary cache for openshift-infra ns.
+		if err := cache.Start(stop); err != nil {
+			errChan <- err
+		}
+	}()
+
+	log.Info("waiting for cache to sync")
+	if !cache.WaitForCacheSync(stop) {
+		return fmt.Errorf("failed to sync cache")
+	}
+	log.Info("cache synced")
+
+	go func() {
+		log.Info("Starting the Cmd.")
+		errChan <- mgr.Start(stop)
+	}()
+
+	return <-errChan
 }

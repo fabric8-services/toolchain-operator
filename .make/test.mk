@@ -130,6 +130,8 @@ e2e-cleanup:
 	oc delete oauthclient codeready-toolchain || true
 	oc delete clusterrolebinding toolchain-enabler || true
 	oc delete clusterrole toolchain-enabler || true
+	oc delete -f deploy/olm-catalog/manifests/0.0.2/dsaas-cluster-admin.ClusterRole.yaml || true
+	oc delete -f deploy/olm-catalog/manifests/0.0.2/online-registration.ClusterRole.yaml || true
 	oc delete project $(NAMESPACE) || true
 
 #-------------------------------------------------------------------------------

@@ -14,13 +14,12 @@ import (
 	"github.com/fabric8-services/toolchain-operator/pkg/apis"
 	"github.com/fabric8-services/toolchain-operator/pkg/client"
 	. "github.com/fabric8-services/toolchain-operator/pkg/config"
+	"github.com/fabric8-services/toolchain-operator/pkg/online_registration"
 	. "github.com/fabric8-services/toolchain-operator/test"
 	oauthv1 "github.com/openshift/api/oauth/v1"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
-	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"net/http"
@@ -57,6 +56,8 @@ func TestToolChainEnablerController(t *testing.T) {
 	s := scheme.Scheme
 	s.AddKnownTypes(codereadyv1alpha1.SchemeGroupVersion, tce)
 
+	cache := NewFakeCache(nil)
+
 	t.Run("Reconcile", func(t *testing.T) {
 		t.Run("without registering openshift specific resources", func(t *testing.T) {
 			//given
@@ -64,7 +65,7 @@ func TestToolChainEnablerController(t *testing.T) {
 			cl := client.NewClient(fake.NewFakeClient(objs...))
 
 			// Create a ReconcileToolChainEnabler object with the scheme and fake client.
-			r := &ReconcileToolChainEnabler{client: cl, scheme: s}
+			r := &ReconcileToolChainEnabler{client: cl, scheme: s, cache: cache}
 
 			req := newReconcileRequest(Name)
 
@@ -82,14 +83,14 @@ func TestToolChainEnablerController(t *testing.T) {
 			cl := client.NewClient(fake.NewFakeClient())
 
 			// Create a ReconcileToolChainEnabler object with the scheme and fake client.
-			r := &ReconcileToolChainEnabler{client: cl, scheme: s}
+			r := &ReconcileToolChainEnabler{client: cl, scheme: s, cache: cache}
 
 			req := newReconcileRequest(Name)
 
 			//when
 			res, err := r.Reconcile(req)
 
-			//then
+			//then - verify resources are not getting created if custom resource is not available in operator ns
 			require.NoError(t, err, "reconcile is failing")
 			assert.False(t, res.Requeue, "reconcile requested requeue request")
 
@@ -100,8 +101,15 @@ func TestToolChainEnablerController(t *testing.T) {
 			actual, err := cl.GetClusterRoleBinding(SelfProvisioner)
 			assert.Error(t, err, "failed to get not found error")
 			assert.Nil(t, actual, "found ClusterRoleBinding %s", SelfProvisioner)
-		})
 
+			sa, err = cl.GetServiceAccount(online_registration.Namespace, online_registration.ServiceAccountName)
+			assert.Error(t, err, "failed to get not found error")
+			assert.Nil(t, sa, "found sa %s", online_registration.ServiceAccountName)
+
+			actual, err = cl.GetClusterRoleBinding(online_registration.ClusterRoleBindingName)
+			assert.Error(t, err, "failed to get not found error")
+			assert.Nil(t, actual, "found ClusterRoleBinding %s", online_registration.ClusterRoleBindingName)
+		})
 	})
 
 	t.Run("SA", func(t *testing.T) {
@@ -547,34 +555,4 @@ func newReconcileRequest(name string) reconcile.Request {
 			Namespace: Namespace,
 		},
 	}
-}
-
-type DummyClient struct {
-	client.Client
-	resources map[string]string
-}
-
-func NewDummyClient(k8sClient client.Client, opts map[string]string) client.Client {
-	return &DummyClient{k8sClient, opts}
-}
-
-func (d *DummyClient) GetServiceAccount(namespace, name string) (*v1.ServiceAccount, error) {
-	if msg, ok := d.resources["sa"]; ok {
-		return nil, errors.New(msg)
-	}
-	return d.Client.GetServiceAccount(namespace, name)
-}
-
-func (d *DummyClient) GetClusterRoleBinding(name string) (*rbacv1.ClusterRoleBinding, error) {
-	if msg, ok := d.resources["crb"]; ok {
-		return nil, errors.New(msg)
-	}
-	return d.Client.GetClusterRoleBinding(name)
-}
-
-func (d *DummyClient) GetOAuthClient(name string) (*oauthv1.OAuthClient, error) {
-	if msg, ok := d.resources["oc"]; ok {
-		return nil, errors.New(msg)
-	}
-	return d.Client.GetOAuthClient(name)
 }

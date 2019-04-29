@@ -18,23 +18,23 @@ const (
 	cleanupTimeout       = time.Second * 5
 )
 
-func waitForServiceAccount(t *testing.T, operatorClient client.Client, namespace string) error {
+func waitForServiceAccount(t *testing.T, operatorClient client.Client, namespace string, name string) error {
 	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		sa, err := operatorClient.GetServiceAccount(namespace, config.SAName)
+		sa, err := operatorClient.GetServiceAccount(namespace, name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				t.Logf("Waiting for availability of service account %s in namespace %s \n", config.SAName, namespace)
+				t.Logf("Waiting for availability of service account %s in namespace %s \n", name, namespace)
 				return false, nil
 			}
 			return false, err
 		}
 
 		if sa != nil {
-			t.Logf("Found service account %s in namespace %s \n", config.SAName, namespace)
+			t.Logf("Found service account %s in namespace %s \n", name, namespace)
 			return true, nil
 		}
 
-		t.Logf("Waiting for service account %s \n", config.SAName)
+		t.Logf("Waiting for service account %s in namespace %s \n", name, namespace)
 		return false, nil
 	})
 }

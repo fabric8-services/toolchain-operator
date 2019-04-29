@@ -1,0 +1,96 @@
+# copied from https://raw.githubusercontent.com/openshift/online/master/ansible/roles/oso_registration/files/online-registration.json
+# used oc convert -f your_file > deploy/olm-catalog/manifests/0.0.2/online-registration.ClusterRole.yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    authorization.openshift.io/system-only: "true"
+  creationTimestamp: null
+  labels:
+    app: online-registration
+  name: online-registration
+rules:
+- apiGroups:
+  - ""
+  - user.openshift.io
+  resources:
+  - users
+  - identities
+  - useridentitymappings
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - watch
+- apiGroups:
+  - ""
+  - quota.openshift.io
+  resources:
+  - clusterresourcequotas
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - patch
+  - delete
+  - watch
+- apiGroups:
+  - ""
+  - oauth.openshift.io
+  resources:
+  - oauthaccesstokens
+  - oauthclientauthorizations
+  verbs:
+  - get
+  - list
+  - delete
+  - deletecollection
+  - watch
+- apiGroups:
+  - ""
+  - user.openshift.io
+  resources:
+  - users
+  - groups
+  verbs:
+  - impersonate
+- apiGroups:
+  - ""
+  resources:
+  - resourcequotas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  - project.openshift.io
+  resources:
+  - projectrequests
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  - authorization.openshift.io
+  resources:
+  - rolebindingrestrictions
+  verbs:
+  - update
+  - patch

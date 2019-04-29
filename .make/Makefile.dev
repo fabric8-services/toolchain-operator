@@ -15,12 +15,12 @@ NAMESPACE:=codeready-toolchain
 create-resources:
 	@echo "Logging using system:admin..."
 	@oc login -u system:admin
-	@echo "Creating namespaced scope resources..."
+	@echo "Creating cluster scoped resources..."
 	@cat $(DEPLOY_DIR)/global-manifests.yaml | sed s/\REPLACE_NAMESPACE/$(NAMESPACE)/ | oc apply -f -
-	@echo "Creating dsaas-cluster-admin ClusterRole"
-	@cat $(DEPLOY_DIR)/namespace-manifests.yaml | sed s/\REPLACE_NAMESPACE/$(NAMESPACE)/ | oc apply -f -
-	@echo "Creating cluster scoped resources"
 	@oc apply -f $(DEPLOY_DIR)/olm-catalog/manifests/0.0.2/dsaas-cluster-admin.ClusterRole.yaml
+	@oc apply -f $(DEPLOY_DIR)/olm-catalog/manifests/0.0.2/online-registration.ClusterRole.yaml
+	@echo "Creating namespaced scope resources..."
+	@cat $(DEPLOY_DIR)/namespace-manifests.yaml | sed s/\REPLACE_NAMESPACE/$(NAMESPACE)/ | oc apply -f -
 
 .PHONY: create-cr
 create-cr:
@@ -52,7 +52,7 @@ clean-operator:
 .PHONY: clean-resources
 clean-resources:
 	@echo "Deleting sub resources..."
-	$(Q)oc delete -f $(DEPLOY_DIR)/crds/codeready_v1alpha1_toolchainenabler_cr.yaml || true
+	@oc delete -f $(DEPLOY_DIR)/crds/codeready_v1alpha1_toolchainenabler_cr.yaml || true
 	@echo "Deleting namespaced scope resources..."
 	@cat $(DEPLOY_DIR)/namespace-manifests.yaml | sed s/\REPLACE_NAMESPACE/$(NAMESPACE)/ | oc delete -f - || true
 	@echo "deleting cluster scoped resources"
@@ -61,6 +61,12 @@ clean-resources:
 	@oc delete oauthclient codeready-toolchain || true
 	@echo "Deleting dsaas-cluster-admin ClusterRole"
 	@oc delete -f $(DEPLOY_DIR)/olm-catalog/manifests/0.0.2/dsaas-cluster-admin.ClusterRole.yaml || true
+	@echo "Deleting online-registration ClusterRole"
+	@oc delete -f $(DEPLOY_DIR)/olm-catalog/manifests/0.0.2/online-registration.ClusterRole.yaml || true
+	@echo "Deleting online-registration ClusterRoleBinding"
+	@oc delete clusterrolebinding online-registration || true
+	@echo "Deleting online-registration sa from openshift-infra namespace"
+	@oc delete sa online-registration -n openshift-infra || true
 
 .PHONY: deploy-operator
 deploy-operator: build build-image
