@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: toolchain-enabler
+  namespace: REPLACE_NAMESPACE
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: toolchain-enabler
+  namespace: REPLACE_NAMESPACE
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - events
+  - configmaps
+  - secrets
+  - serviceaccounts
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - create
+  - delete
+- apiGroups:
+  - codeready.openshift.io
+  resources:
+  - toolchainenablers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: toolchain-enabler
+  namespace: REPLACE_NAMESPACE
+subjects:
+- kind: ServiceAccount
+  name: toolchain-enabler
+roleRef:
+  kind: Role
+  name: toolchain-enabler
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: toolchain
+type: Opaque
+data:
+  tc.client.id: YmI2ZDA0M2QtZjI0My00NThmLTg0OTgtMmMxOGExMmRjZjQ3
+  tc.client.secret: c2VjcmV0
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: toolchain
+data:
+  auth.url: https://auth.openshift.io
+  cluster.url: https://cluster.openshift.io
+  #auth.url: http://auth-fabric8-services.192.168.42.205.nip.io
+  #cluster.url: http://f8cluster-fabric8-services.192.168.42.205.nip.io
+  cluster.name: "dsaas-stage" # this is temporary workaround until we have some way to figure our how to get cluster name

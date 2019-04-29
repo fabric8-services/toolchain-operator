@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: toolchain-enabler
-  namespace: codeready-toolchain
 spec:
   replicas: 1
   selector:
@@ -21,7 +20,7 @@ spec:
           ports:
           - containerPort: 60000
             name: metrics
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           readinessProbe:
             exec:
               command:

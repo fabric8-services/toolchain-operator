@@ -116,13 +116,13 @@ test-unit: prebuild-check $(SOURCES)
 
 .PHONY: test-e2e
 ## Runs the e2e tests and WITHOUT producing coverage files for each package.
-test-e2e: build build-image e2e-setup
+test-e2e: e2e-setup create-resources deploy-operator
 	$(call log-info,"Running E2E test: $@")
-	go test ./test/e2e/... -root=$(PWD) -kubeconfig=$(HOME)/.kube/config -globalMan deploy/test/global-manifests.yaml -namespacedMan deploy/test/namespace-manifests.yaml -v -parallel=1 -singleNamespace
+	operator-sdk test local ./test/e2e --no-setup --debug --namespace $(NAMESPACE)
 
 .PHONY: e2e-setup
 e2e-setup:  e2e-cleanup
-	oc new-project toolchain-e2e-test || true
+	oc new-project ${NAMESPACE} || true
 
 .PHONY: e2e-cleanup
 e2e-cleanup:
@@ -130,7 +130,7 @@ e2e-cleanup:
 	oc delete oauthclient codeready-toolchain || true
 	oc delete clusterrolebinding toolchain-enabler || true
 	oc delete clusterrole toolchain-enabler || true
-	oc delete project toolchain-e2e-test || true
+	oc delete project $(NAMESPACE) || true
 
 #-------------------------------------------------------------------------------
 # Inspect coverage of unit tests, integration tests in either pure
