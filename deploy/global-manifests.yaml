@@ -172,4 +172,3 @@ subjects:
 - kind: ServiceAccount
   name: toolchain-enabler
   namespace: REPLACE_NAMESPACE
-

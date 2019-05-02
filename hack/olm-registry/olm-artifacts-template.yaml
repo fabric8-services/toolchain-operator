@@ -60,4 +60,4 @@ objects:
   data:
     auth.url: https://auth.openshift.io
     cluster.url: https://cluster.openshift.io
-    cluster.name: "dsaas-stage" # this is workaround to run tests on minishift
+    cluster.name: "dsaas-stage"   # this is workaround to run tests on minishift

@@ -1,5 +1,5 @@
-# copied from https://raw.githubusercontent.com/openshift/online/master/ansible/roles/oso_registration/files/online-registration.json
-# used oc convert -f your_file > deploy/olm-catalog/manifests/0.0.2/online-registration.ClusterRole.yaml
+# copied from https://git.io/fj3Yu. used oc convert -f your_file >
+# deploy/olm-catalog/manifests/0.0.2/online-registration.ClusterRole.yaml
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
