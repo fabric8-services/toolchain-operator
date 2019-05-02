@@ -8,7 +8,7 @@ include ./make/go.mk
 
 .PHONY: lint
 ## Runs linters on Go code files and YAML files
-lint: lint-go-code lint-yaml courier
+lint: lint-go-code lint-yaml
 
 YAML_FILES := $(shell find . -path ./vendor -prune -o -type f -regex ".*y[a]ml" -print)
 .PHONY: lint-yaml
