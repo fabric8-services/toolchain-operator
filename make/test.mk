@@ -23,7 +23,7 @@ test-coverage-html: ./vendor ./out/cover.out
 	$(Q)go test ${V_FLAG} -race $(shell go list ./... | grep -v /test/e2e) -failfast -coverprofile=cover.out -covermode=atomic -outputdir=./out
 
 .PHONY: test-e2e-ci
-test-e2e-ci: e2e-setup create-resources deploy-operator-for-ci
+test-e2e-ci: ./vendor e2e-setup create-resources deploy-operator-for-ci
 	$(Q)operator-sdk test local ./test/e2e --no-setup --debug --namespace $(NAMESPACE) --go-test-flags "-v -timeout=15m"
 
 .PHONY: test-e2e
