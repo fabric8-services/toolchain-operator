@@ -22,21 +22,25 @@ test-coverage-html: ./vendor ./out/cover.out
 ./out/cover.out: ./vendor
 	$(Q)go test ${V_FLAG} -race $(shell go list ./... | grep -v /test/e2e) -failfast -coverprofile=cover.out -covermode=atomic -outputdir=./out
 
+.PHONY: test-e2e-ci
+test-e2e-ci: e2e-setup create-resources deploy-operator-for-ci
+	$(Q)operator-sdk test local ./test/e2e --no-setup --debug --namespace $(NAMESPACE) --go-test-flags "-v -timeout=15m"
+
 .PHONY: test-e2e
 ## Runs the e2e tests locally
 test-e2e: ./vendor e2e-setup create-resources deploy-operator
 	$(info Running E2E test: $@)
-ifeq ($(OPENSHIFT_VERSION),3)
-	$(Q)oc login -u system:admin
-endif
 	$(Q)operator-sdk test local ./test/e2e --no-setup --debug --namespace $(NAMESPACE) --go-test-flags "-v -timeout=15m"
 
 .PHONY: e2e-setup
-e2e-setup: e2e-cleanup 
+e2e-setup: e2e-cleanup
 	$(Q)oc new-project $(NAMESPACE)
 
 .PHONY: e2e-cleanup
 e2e-cleanup:
+    ifeq ($(OPENSHIFT_VERSION),3)
+        $(Q)oc login -u system:admin
+    endif
 	$(Q)oc delete project $(NAMESPACE) --timeout=10s --wait || true
 
 endif

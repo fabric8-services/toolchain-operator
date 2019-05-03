@@ -15,8 +15,8 @@ spec:
       serviceAccountName: toolchain-enabler
       containers:
         - name: toolchain-enabler
-          # Using latest until operator is not in usable shape.
-          image: quay.io/openshiftio/toolchain-operator:latest
+          # replace it when running operator with latest built container image.
+          image: REPLACE_IMAGE
           ports:
           - containerPort: 60000
             name: metrics

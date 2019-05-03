@@ -82,7 +82,12 @@ clean-resources:
 deploy-operator: build build-operator-image
 	@oc project $(NAMESPACE)
 	@echo "Creating Deployment for Operator"
-	@cat $(DEPLOY_DIR)/operator.yaml | sed s/\:latest/:$(TAG)/ | oc create -f -
+	$(Q)sed -e 's|REPLACE_IMAGE|quay.io/openshiftio/toolchain-operator:$(TAG)|g' $(DEPLOY_DIR)/operator.yaml  | oc apply -f - --namespace $(NAMESPACE)
+
+.PHONY: deploy-operator-for-ci
+deploy-operator-for-ci:
+	@echo "Creating Deployment for Operator"
+	$(Q)sed -e 's|REPLACE_IMAGE|registry.svc.ci.openshift.org/${OPENSHIFT_BUILD_NAMESPACE}/stable:toolchain-operator|g' $(DEPLOY_DIR)/operator.yaml  | oc apply -f - --namespace $(NAMESPACE)
 
 .PHONY: minishift-start
 minishift-start:
