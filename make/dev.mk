@@ -56,11 +56,15 @@ delete-project:
 
 .PHONY: clean-operator
 clean-operator:
+	@echo "Logging using system:admin..."
+	@oc login -u system:admin
 	@echo "Deleting Deployment for Operator"
 	@cat $(DEPLOY_DIR)/operator.yaml | sed s/\:latest/:$(TAG)/ | oc delete -f - || true
 
 .PHONY: clean-resources
 clean-resources:
+	@echo "Logging using system:admin..."
+	@oc login -u system:admin
 	@echo "Deleting sub resources..."
 	@oc delete -f $(DEPLOY_DIR)/crds/codeready_v1alpha1_toolchainenabler_cr.yaml || true
 	@echo "Deleting namespaced scope resources..."
