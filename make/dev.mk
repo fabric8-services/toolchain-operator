@@ -21,10 +21,13 @@ push-operator-image: build-operator-image
 	@docker login -u $(QUAY_USERNAME) -p $(QUAY_PASSWORD) $(REGISTRY_URI)
 	docker push $(DOCKER_REPO)/$(IMAGE_NAME):$(TAG)
 
-.PHONY: create-resources
-create-resources:
+.PHONY: login-as-admin
+login-as-admin:
 	@echo "Logging using system:admin..."
 	@oc login -u system:admin
+
+.PHONY: create-resources
+create-resources: login-as-admin
 	@echo "Creating cluster scoped resources..."
 	@cat $(DEPLOY_DIR)/global-manifests.yaml | sed s/\REPLACE_NAMESPACE/$(NAMESPACE)/ | oc apply -f -
 	@oc apply -f $(DEPLOY_DIR)/olm-catalog/manifests/0.0.2/dsaas-cluster-admin.ClusterRole.yaml
@@ -55,16 +58,12 @@ delete-project:
 	@oc delete project $(NAMESPACE) || true
 
 .PHONY: clean-operator
-clean-operator:
-	@echo "Logging using system:admin..."
-	@oc login -u system:admin
+clean-operator: login-as-admin
 	@echo "Deleting Deployment for Operator"
 	@cat $(DEPLOY_DIR)/operator.yaml | sed s/\:latest/:$(TAG)/ | oc delete -f - || true
 
 .PHONY: clean-resources
-clean-resources:
-	@echo "Logging using system:admin..."
-	@oc login -u system:admin
+clean-resources: login-as-admin
 	@echo "Deleting sub resources..."
 	@oc delete -f $(DEPLOY_DIR)/crds/codeready_v1alpha1_toolchainenabler_cr.yaml || true
 	@echo "Deleting namespaced scope resources..."
