@@ -9,6 +9,7 @@ import (
 	errs "github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 )
 
@@ -19,7 +20,7 @@ func clusterNameAndAPIURL(i configInformer) configOption {
 		infrastructure, err := i.oc.GetInfrastructure("cluster")
 		if err != nil {
 			// Openshift 3 doesn't have infrastucture resource named cluster. This is workaround for our tests to run on minishift
-			if meta.IsNoMatchError(err) && infrastructure == nil {
+			if infrastructure == nil && (errors.IsNotFound(err) || meta.IsNoMatchError(err)) {
 				apiURL := fmt.Sprintf("https://api.%s.openshift.com/", i.clusterName)
 				// To Do change to warning when we moved to logrus implementation
 				log.Info("forming cluster url using given cluster name for openshift 3 clusters", "cluster_name", i.clusterName, "cluster_url", apiURL)
