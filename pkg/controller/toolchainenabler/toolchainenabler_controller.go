@@ -298,7 +298,6 @@ func (r *ReconcileToolChainEnabler) bindSelfProvisionerRole(tce *codereadyv1alph
 // bindDsaasClusterAdminRole creates ClusterRoleBinding for Service Account with dsaas-cluster-admin cluster role
 func (r *ReconcileToolChainEnabler) bindDsaasClusterAdminRole(tce *codereadyv1alpha1.ToolChainEnabler, saName, namespace string) error {
 	// currently we have defined ClusterRole dsaas-cluster-admin which needs to be create before running this operator.
-	// TODO: we should verify this cluster role existence and create if missing.
 	crb := &rbacv1.ClusterRoleBinding{
 		Subjects: []rbacv1.Subject{
 			{
