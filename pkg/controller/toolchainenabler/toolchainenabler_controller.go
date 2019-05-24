@@ -2,6 +2,8 @@ package toolchainenabler
 
 import (
 	"context"
+	"net/url"
+	"time"
 
 	"fmt"
 
@@ -11,8 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-
-	"time"
 
 	clusterclient "github.com/fabric8-services/fabric8-cluster-client/cluster"
 	"github.com/fabric8-services/fabric8-common/httpsupport"
@@ -41,6 +41,9 @@ import (
 var log = logf.Log.WithName("controller_toolchainenabler")
 
 const (
+	TCSecretName      = "toolChainSecretName"
+	TCClientID        = "tc.client.id"
+	TCClientSecret    = "tc.client.secret"
 	SelfProvisioner   = "system:toolchain-sre:self-provisioner"
 	DsaasClusterAdmin = "system:toolchain-sre:dsaas-cluster-admin"
 )
@@ -198,13 +201,18 @@ func (r *ReconcileToolChainEnabler) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	clusterData, err := r.clusterInfo(namespacedName.Namespace)
+	cfg, err := createConfig(r.client, namespacedName.Namespace, instance.Spec)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.saveClusterConfiguration(clusterData); err != nil {
-		log.Error(err, "failed to save cluster configuration in cluster service", "cluster_service_url", r.config.GetClusterServiceURL())
+	clusterData, err := r.clusterInfo(namespacedName.Namespace, cfg)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.saveClusterConfiguration(clusterData, cfg); err != nil {
+		log.Error(err, "failed to save cluster configuration in cluster service", "cluster_service_url", cfg.GetClusterServiceURL())
 		// requeue after 5 seconds if failed while calling remote cluster service
 		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
@@ -379,12 +387,86 @@ func (r ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.Tool
 	return nil
 }
 
-func (r ReconcileToolChainEnabler) clusterInfo(ns string, options ...cluster.SASecretOption) (*clusterclient.CreateClusterData, error) {
-	i := cluster.NewConfigInformer(r.client, ns, r.config.GetClusterName())
+func (r ReconcileToolChainEnabler) clusterInfo(ns string, cfg toolChainConfig, options ...cluster.SASecretOption) (*clusterclient.CreateClusterData, error) {
+	i := cluster.NewConfigInformer(r.client, ns, cfg.GetClusterName())
 	return i.Inform(options...)
 }
 
-func (r ReconcileToolChainEnabler) saveClusterConfiguration(data *clusterclient.CreateClusterData, options ...httpsupport.HTTPClientOption) error {
-	service := cluster.NewClusterService(r.config)
+func (r ReconcileToolChainEnabler) saveClusterConfiguration(data *clusterclient.CreateClusterData, cfg toolChainConfig, options ...httpsupport.HTTPClientOption) error {
+	service := cluster.NewClusterService(cfg)
 	return service.CreateCluster(context.Background(), data, options...)
+}
+
+func createConfig(client client.Client, namespaceName string, spec codereadyv1alpha1.ToolChainEnablerSpec) (tcConfig toolChainConfig, err error) {
+	if err = validateURL(spec.AuthURL, "auth service"); err != nil {
+		return tcConfig, err
+	}
+	if err = validateURL(spec.ClusterURL, "cluster service"); err != nil {
+		return tcConfig, err
+	}
+	if spec.ToolChainSecretName == "" {
+		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty", TCSecretName))
+	}
+	secret, err := client.GetSecret(namespaceName, spec.ToolChainSecretName)
+	if err != nil {
+		return tcConfig, errs.Wrapf(err, "failed to get secret '%s'", spec.ToolChainSecretName)
+	}
+	if len(secret.Data[TCClientID]) <= 0 {
+		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientID, spec.ToolChainSecretName))
+	}
+	if len(secret.Data[TCClientSecret]) <= 0 {
+		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientSecret, spec.ToolChainSecretName))
+	}
+
+	tcConfig = toolChainConfig{
+		AuthURL:      spec.AuthURL,
+		ClusterURL:   spec.ClusterURL,
+		ClusterName:  spec.ClusterName,
+		ClientID:     string(secret.Data[TCClientID]),
+		ClientSecret: string(secret.Data[TCClientSecret]),
+	}
+	return tcConfig, nil
+}
+
+func validateURL(serviceURL, serviceName string) error {
+	if serviceURL == "" {
+		return errs.New(fmt.Sprintf("'%s' url is empty", serviceName))
+	} else {
+		u, err := url.Parse(serviceURL)
+		if err != nil {
+			return errs.Wrapf(err, fmt.Sprintf("invalid url for %s: '%s'", serviceName, serviceURL))
+		}
+		if u.Host == "" {
+			return errs.New(fmt.Sprintf("invalid url '%s' (missing scheme or host?) for: %s", serviceURL, serviceName))
+		}
+	}
+	return nil
+}
+
+type toolChainConfig struct {
+	AuthURL      string
+	ClusterURL   string
+	ClusterName  string
+	ClientID     string
+	ClientSecret string
+}
+
+func (c toolChainConfig) GetClusterServiceURL() string {
+	return c.ClusterURL
+}
+
+func (c toolChainConfig) GetAuthServiceURL() string {
+	return c.AuthURL
+}
+
+func (c toolChainConfig) GetClientID() string {
+	return c.ClientID
+}
+
+func (c toolChainConfig) GetClientSecret() string {
+	return c.ClientSecret
+}
+
+func (c toolChainConfig) GetClusterName() string {
+	return c.ClusterName
 }
