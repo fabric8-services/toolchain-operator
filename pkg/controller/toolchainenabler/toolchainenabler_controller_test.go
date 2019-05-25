@@ -1,14 +1,17 @@
 package toolchainenabler
 
 import (
+	"testing"
+
 	codereadyv1alpha1 "github.com/fabric8-services/toolchain-operator/pkg/apis/codeready/v1alpha1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"testing"
 
 	"context"
 	"fmt"
+	"net/http"
+
 	clusterclient "github.com/fabric8-services/fabric8-cluster-client/cluster"
 	"github.com/fabric8-services/fabric8-common/httpsupport"
 	"github.com/fabric8-services/toolchain-operator/pkg/apis"
@@ -19,11 +22,9 @@ import (
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/h2non/gock.v1"
+	gock "gopkg.in/h2non/gock.v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"net/http"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -351,17 +352,12 @@ func TestToolChainEnablerController(t *testing.T) {
 			// register openshift resources specific schema
 			err := apis.AddToScheme(scheme.Scheme)
 			require.NoError(t, err)
-			reset := SetEnv(Env("CLUSTER_NAME", "dsaas-stage"), Env("TC_CLIENT_ID", "toolchain"), Env("TC_CLIENT_SECRET", "secret"), Env("AUTH_URL", "http://auth"), Env("CLUSTER_URL", "http://cluster"))
-			defer reset()
-
-			conf, err := NewConfiguration()
-			require.NoError(t, err)
 
 			// Create a fake client to mock API calls.
 			cl := client.NewClient(fake.NewFakeClient(objs...))
 
 			// Create a ReconcileToolChainEnabler object with the scheme and fake client.
-			r := &ReconcileToolChainEnabler{client: cl, scheme: s, config: conf}
+			r := &ReconcileToolChainEnabler{client: cl, scheme: s}
 
 			// create sa, rolebinding, oauthclient resources
 			req := newReconcileRequest(Name)
@@ -381,7 +377,7 @@ func TestToolChainEnablerController(t *testing.T) {
 			saSecretOption := SASecretOption(t, cl, Namespace)
 
 			//when
-			clusterData, err := r.clusterInfo(Namespace, saSecretOption)
+			clusterData, err := r.clusterInfo(Namespace, newConfig(), saSecretOption)
 
 			//then
 			require.NoError(t, err, "reconcile is failing")
@@ -393,17 +389,12 @@ func TestToolChainEnablerController(t *testing.T) {
 			// register openshift resources specific schema
 			err := apis.AddToScheme(scheme.Scheme)
 			require.NoError(t, err)
-			reset := SetEnv(Env("CLUSTER_NAME", "dsaas-stage"), Env("TC_CLIENT_ID", "toolchain"), Env("TC_CLIENT_SECRET", "secret"), Env("AUTH_URL", "http://auth"), Env("CLUSTER_URL", "http://cluster"))
-			defer reset()
-
-			conf, err := NewConfiguration()
-			require.NoError(t, err)
 
 			// Create a fake client to mock API calls.
 			cl := client.NewClient(fake.NewFakeClient(objs...))
 
 			// Create a ReconcileToolChainEnabler object with the scheme and fake client.
-			r := &ReconcileToolChainEnabler{client: cl, scheme: s, config: conf}
+			r := &ReconcileToolChainEnabler{client: cl, scheme: s}
 
 			// create sa, rolebinding, oauthclient resources
 			req := newReconcileRequest(Name)
@@ -419,7 +410,7 @@ func TestToolChainEnablerController(t *testing.T) {
 			require.NoError(t, err)
 
 			//when
-			_, err = r.clusterInfo(Namespace)
+			_, err = r.clusterInfo(Namespace, newConfig())
 
 			//then
 			assert.EqualError(t, err, "couldn't find any secret reference for sa toolchain-sre")
@@ -443,21 +434,18 @@ func TestToolChainEnablerController(t *testing.T) {
 			BodyString(`{"data":{"api-url":"https://api.dsaas-stage.openshift.com/","app-dns":"8a09.starter-us-east-2.openshiftapps.com","auth-client-default-scope":"user:full","auth-client-id":"codeready-toolchain","auth-client-secret":"oauthsecret","name":"dsaas-stage","service-account-token":"mysatoken","service-account-username":"system:serviceaccount:config-test:toolchain-sre","token-provider-id":"3d7b75e3-7053-4846-9b64-26cf42717692","type":"OSD"}}`).
 			Reply(201)
 
-		reset := SetEnv(Env("CLUSTER_NAME", "dsaas-stage"), Env("TC_CLIENT_ID", "bb6d043d-f243-458f-8498-2c18a12dcf47"), Env("TC_CLIENT_SECRET", "secret"), Env("AUTH_URL", "http://auth"), Env("CLUSTER_URL", "http://cluster"))
-		defer reset()
-		c, err := NewConfiguration()
-		require.NoError(t, err)
+		cfg := newConfig()
 
 		// Create a fake client to mock API calls.
 		cl := client.NewClient(fake.NewFakeClient(objs...))
 
 		// Create a ReconcileToolChainEnabler object with the scheme and fake client.
-		r := &ReconcileToolChainEnabler{client: cl, scheme: s, config: c}
+		r := &ReconcileToolChainEnabler{client: cl, scheme: s}
 
 		tokenID := "3d7b75e3-7053-4846-9b64-26cf42717692"
 		clusterData := &clusterclient.CreateClusterData{
-			Name:                   os.Getenv("CLUSTER_NAME"),
-			APIURL:                 `https://api.` + os.Getenv("CLUSTER_NAME") + `.openshift.com/`,
+			Name:                   cfg.ClusterName,
+			APIURL:                 `https://api.` + cfg.ClusterName + `.openshift.com/`,
 			AppDNS:                 "8a09.starter-us-east-2.openshiftapps.com",
 			ServiceAccountToken:    "mysatoken",
 			ServiceAccountUsername: "system:serviceaccount:config-test:toolchain-sre",
@@ -469,7 +457,7 @@ func TestToolChainEnablerController(t *testing.T) {
 		}
 
 		// when
-		err = r.saveClusterConfiguration(clusterData, httpsupport.WithRoundTripper(http.DefaultTransport))
+		err := r.saveClusterConfiguration(clusterData, cfg, httpsupport.WithRoundTripper(http.DefaultTransport))
 
 		//then
 		assert.NoError(t, err)
@@ -554,5 +542,15 @@ func newReconcileRequest(name string) reconcile.Request {
 			Name:      name,
 			Namespace: Namespace,
 		},
+	}
+}
+
+func newConfig() ToolChainConfig {
+	return ToolChainConfig{
+		ClusterName:  "dsaas-stage",
+		ClientID:     "bb6d043d-f243-458f-8498-2c18a12dcf47",
+		ClientSecret: "secret",
+		AuthURL:      "http://auth",
+		ClusterURL:   "http://cluster",
 	}
 }

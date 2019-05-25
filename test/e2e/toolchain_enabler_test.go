@@ -1,14 +1,17 @@
 package e2e
 
 import (
+	"testing"
+
 	"github.com/fabric8-services/toolchain-operator/pkg/apis"
 	codereadyv1alpha1 "github.com/fabric8-services/toolchain-operator/pkg/apis/codeready/v1alpha1"
-	"testing"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/fabric8-services/toolchain-operator/pkg/client"
 	"github.com/fabric8-services/toolchain-operator/pkg/config"
 	"github.com/fabric8-services/toolchain-operator/pkg/controller/toolchainenabler"
 	"github.com/fabric8-services/toolchain-operator/pkg/online_registration"
+	"github.com/fabric8-services/toolchain-operator/test"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 	"github.com/stretchr/testify/assert"
@@ -56,12 +59,23 @@ func TestToolChainEnabler(t *testing.T) {
 			Name:      "example-toolchainenabler",
 			Namespace: namespace,
 		},
+		Spec: codereadyv1alpha1.ToolChainEnablerSpec{
+			AuthURL:             "https://auth.openshift.io",
+			ClusterURL:          "https://cluster.openshift.io",
+			ClusterName:         "dsaas-stage",
+			ToolChainSecretName: "toolchain",
+		},
 	}
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
 	err = f.Client.Create(context.TODO(), exampleToolChainEnabler, &framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(t, err, "failed to create custom resource of kind `ToolChainEnabler`")
 
 	operatorClient := client.NewClient(f.Client.Client)
+	toolchainSecret := test.Secret("toolchain", namespace, "", corev1.SecretTypeOpaque)
+	toolchainSecret.Data[config.TCClientID] = []byte("bb6d043d-f243-458f-8498-2c18a12dcf47")
+	toolchainSecret.Data[config.TCClientSecret] = []byte("secret")
+	err = operatorClient.CreateSecret(toolchainSecret)
+	require.NoError(t, err)
 
 	t.Run("verify", func(t *testing.T) {
 		err = verifyResources(t, operatorClient, namespace)

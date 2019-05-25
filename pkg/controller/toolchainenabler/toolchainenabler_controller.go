@@ -2,7 +2,6 @@ package toolchainenabler
 
 import (
 	"context"
-	"net/url"
 	"time"
 
 	"fmt"
@@ -42,8 +41,6 @@ var log = logf.Log.WithName("controller_toolchainenabler")
 
 const (
 	TCSecretName      = "toolChainSecretName"
-	TCClientID        = "tc.client.id"
-	TCClientSecret    = "tc.client.secret"
 	SelfProvisioner   = "system:toolchain-sre:self-provisioner"
 	DsaasClusterAdmin = "system:toolchain-sre:dsaas-cluster-admin"
 )
@@ -52,12 +49,7 @@ const (
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, infraCache cache.Cache) error {
 
-	configuration, err := config.NewConfiguration()
-	if err != nil {
-		return errs.Wrapf(err, "something went wrong while creating configuration")
-	}
-
-	reconciler := &ReconcileToolChainEnabler{client: client.NewClient(mgr.GetClient()), scheme: mgr.GetScheme(), config: configuration, cache: infraCache}
+	reconciler := &ReconcileToolChainEnabler{client: client.NewClient(mgr.GetClient()), scheme: mgr.GetScheme(), cache: infraCache}
 
 	// Create a new controller
 	c, err := controller.New("toolchainenabler-controller", mgr, controller.Options{Reconciler: reconciler})
@@ -130,7 +122,6 @@ type ReconcileToolChainEnabler struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
-	config *config.Configuration
 
 	// maintaining secondary cache for openshift-infra namespace to do necessary actions for Service Account
 	cache cache.Cache
@@ -387,23 +378,17 @@ func (r ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.Tool
 	return nil
 }
 
-func (r ReconcileToolChainEnabler) clusterInfo(ns string, cfg toolChainConfig, options ...cluster.SASecretOption) (*clusterclient.CreateClusterData, error) {
+func (r ReconcileToolChainEnabler) clusterInfo(ns string, cfg config.ToolChainConfig, options ...cluster.SASecretOption) (*clusterclient.CreateClusterData, error) {
 	i := cluster.NewConfigInformer(r.client, ns, cfg.GetClusterName())
 	return i.Inform(options...)
 }
 
-func (r ReconcileToolChainEnabler) saveClusterConfiguration(data *clusterclient.CreateClusterData, cfg toolChainConfig, options ...httpsupport.HTTPClientOption) error {
+func (r ReconcileToolChainEnabler) saveClusterConfiguration(data *clusterclient.CreateClusterData, cfg config.ToolChainConfig, options ...httpsupport.HTTPClientOption) error {
 	service := cluster.NewClusterService(cfg)
 	return service.CreateCluster(context.Background(), data, options...)
 }
 
-func createConfig(client client.Client, namespaceName string, spec codereadyv1alpha1.ToolChainEnablerSpec) (tcConfig toolChainConfig, err error) {
-	if err = validateURL(spec.AuthURL, "auth service"); err != nil {
-		return tcConfig, err
-	}
-	if err = validateURL(spec.ClusterURL, "cluster service"); err != nil {
-		return tcConfig, err
-	}
+func createConfig(client client.Client, namespaceName string, spec codereadyv1alpha1.ToolChainEnablerSpec) (tcConfig config.ToolChainConfig, err error) {
 	if spec.ToolChainSecretName == "" {
 		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty", TCSecretName))
 	}
@@ -411,62 +396,5 @@ func createConfig(client client.Client, namespaceName string, spec codereadyv1al
 	if err != nil {
 		return tcConfig, errs.Wrapf(err, "failed to get secret '%s'", spec.ToolChainSecretName)
 	}
-	if len(secret.Data[TCClientID]) <= 0 {
-		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientID, spec.ToolChainSecretName))
-	}
-	if len(secret.Data[TCClientSecret]) <= 0 {
-		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientSecret, spec.ToolChainSecretName))
-	}
-
-	tcConfig = toolChainConfig{
-		AuthURL:      spec.AuthURL,
-		ClusterURL:   spec.ClusterURL,
-		ClusterName:  spec.ClusterName,
-		ClientID:     string(secret.Data[TCClientID]),
-		ClientSecret: string(secret.Data[TCClientSecret]),
-	}
-	return tcConfig, nil
-}
-
-func validateURL(serviceURL, serviceName string) error {
-	if serviceURL == "" {
-		return errs.New(fmt.Sprintf("'%s' url is empty", serviceName))
-	} else {
-		u, err := url.Parse(serviceURL)
-		if err != nil {
-			return errs.Wrapf(err, fmt.Sprintf("invalid url for %s: '%s'", serviceName, serviceURL))
-		}
-		if u.Host == "" {
-			return errs.New(fmt.Sprintf("invalid url '%s' (missing scheme or host?) for: %s", serviceURL, serviceName))
-		}
-	}
-	return nil
-}
-
-type toolChainConfig struct {
-	AuthURL      string
-	ClusterURL   string
-	ClusterName  string
-	ClientID     string
-	ClientSecret string
-}
-
-func (c toolChainConfig) GetClusterServiceURL() string {
-	return c.ClusterURL
-}
-
-func (c toolChainConfig) GetAuthServiceURL() string {
-	return c.AuthURL
-}
-
-func (c toolChainConfig) GetClientID() string {
-	return c.ClientID
-}
-
-func (c toolChainConfig) GetClientSecret() string {
-	return c.ClientSecret
-}
-
-func (c toolChainConfig) GetClusterName() string {
-	return c.ClusterName
+	return config.Create(spec, secret)
 }
