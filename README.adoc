@@ -15,12 +15,25 @@ Operator to enable CodeReady Toolchain on OSD clusters
 == Overview
 To enable CodeReady Toolchain on any Openshift cluster, we need one time configuration setup which includes following things:
 
-    * creation of service account with required roles
-    * creation of oauth client
-    * finding routing subdomain
-    * finding cluster name and publicly available API URL
+    * Service Account with required roles
+        ** Create service account `toolchain-sre`.
+        ** Create https://raw.githubusercontent.com/fabric8-services/toolchain-operator/master/deploy/olm-catalog/manifests/0.0.2/dsaas-cluster-admin.ClusterRole.yaml[`dsaas-cluster-admin`] clusterrole.
+        ** Bind `self-provisioner` and `dsaas-cluster-admin` clusterrole to `toolchain-sre` service account.
+    * OAuth Client
+        ** Create oauthclient with secret and redirect uris and other required parameters
+    * Cluster Configuration
+        ** Find routing subdomain.
+        ** Find cluster name.
+        ** Find cluster's public url.
+    * Update Cluster Management Service with above cluster configuration
+        ** Get required token from auth service
+        ** Post cluster configuration with valid token to cluster management service.
+    * Pre-requisites for `manage.openshift.com`
+      ** Create service account `online-registration` in `openshift-infra` namespace for `manage.openshift.com`
+      ** Create cluster role https://raw.githubusercontent.com/fabric8-services/toolchain-operator/master/deploy/olm-catalog/manifests/0.0.2/online-registration.ClusterRole.yaml[`online-registration`] and bind it to `online-registration` service account.
+    * (ToDo) Create image-puller Daemonset for che.
 
-Once, we have above resources, we'll need to update this cluster information to the cluster management service, so that it can provision namespaces/projects to required users on this new cluster.
+As mentioned above operator will update cluster information to the cluster management service, so that it can provision namespaces/projects to required users on this new cluster.
 
 So in short this operator has to create required resources, find required cluster configuration details and update it to cluster management service.
 
