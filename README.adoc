@@ -4,10 +4,8 @@
 :sectnums:
 :experimental:
 
-image:https://ci.centos.org/buildStatus/icon?job=devtools-toolchain-operator-build-master[Jenkins,link="https://ci.centos.org/view/Devtools/job/devtools-toolchain-operator-build-master/lastBuild/"]
 image:https://goreportcard.com/badge/github.com/fabric8-services/toolchain-operator[Go Report Card, link="https://goreportcard.com/report/github.com/fabric8-services/toolchain-operator"]
 image:https://godoc.org/github.com/fabric8-services/toolchain-operator?status.png[GoDoc,link="https://godoc.org/github.com/fabric8-services/toolchain-operator"]
-image:https://codecov.io/gh/fabric8-services/toolchain-operator/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/fabric8-services/toolchain-operator"]
 
 
 Operator to enable CodeReady Toolchain on OSD clusters
