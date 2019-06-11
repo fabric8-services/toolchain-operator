@@ -17,7 +17,7 @@ const (
 	OAuthClientName = "codeready-toolchain"
 )
 
-type ToolChainConfig struct {
+type ToolchainConfig struct {
 	AuthURL      string
 	ClusterURL   string
 	ClusterName  string
@@ -25,27 +25,27 @@ type ToolChainConfig struct {
 	ClientSecret string
 }
 
-func (c ToolChainConfig) GetClusterServiceURL() string {
+func (c ToolchainConfig) GetClusterServiceURL() string {
 	return c.ClusterURL
 }
 
-func (c ToolChainConfig) GetAuthServiceURL() string {
+func (c ToolchainConfig) GetAuthServiceURL() string {
 	return c.AuthURL
 }
 
-func (c ToolChainConfig) GetClientID() string {
+func (c ToolchainConfig) GetClientID() string {
 	return c.ClientID
 }
 
-func (c ToolChainConfig) GetClientSecret() string {
+func (c ToolchainConfig) GetClientSecret() string {
 	return c.ClientSecret
 }
 
-func (c ToolChainConfig) GetClusterName() string {
+func (c ToolchainConfig) GetClusterName() string {
 	return c.ClusterName
 }
 
-func Create(spec codereadyv1alpha1.ToolChainEnablerSpec, secret *v1.Secret) (tcConfig ToolChainConfig, err error) {
+func Create(spec codereadyv1alpha1.ToolChainEnablerSpec, secret *v1.Secret) (tcConfig ToolchainConfig, err error) {
 	if err = validateURL(spec.AuthURL, "auth service"); err != nil {
 		return tcConfig, err
 	}
@@ -53,13 +53,13 @@ func Create(spec codereadyv1alpha1.ToolChainEnablerSpec, secret *v1.Secret) (tcC
 		return tcConfig, err
 	}
 	if len(secret.Data[TCClientID]) <= 0 {
-		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientID, spec.ToolChainSecretName))
+		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientID, spec.ToolchainSecretName))
 	}
 	if len(secret.Data[TCClientSecret]) <= 0 {
-		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientSecret, spec.ToolChainSecretName))
+		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientSecret, spec.ToolchainSecretName))
 	}
 
-	tcConfig = ToolChainConfig{
+	tcConfig = ToolchainConfig{
 		AuthURL:      spec.AuthURL,
 		ClusterURL:   spec.ClusterURL,
 		ClusterName:  spec.ClusterName,

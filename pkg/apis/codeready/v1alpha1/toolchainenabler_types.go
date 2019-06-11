@@ -14,7 +14,7 @@ type ToolChainEnablerSpec struct {
 	AuthURL             string `json:"authURL"`
 	ClusterURL          string `json:"clusterURL"`
 	ClusterName         string `json:"clusterName"`
-	ToolChainSecretName string `json:"toolChainSecretName"`
+	ToolchainSecretName string `json:"toolchainSecretName"`
 }
 
 // ToolChainEnablerStatus defines the observed state of ToolChainEnabler

@@ -545,8 +545,8 @@ func newReconcileRequest(name string) reconcile.Request {
 	}
 }
 
-func newConfig() ToolChainConfig {
-	return ToolChainConfig{
+func newConfig() ToolchainConfig {
+	return ToolchainConfig{
 		ClusterName:  "dsaas-stage",
 		ClientID:     "bb6d043d-f243-458f-8498-2c18a12dcf47",
 		ClientSecret: "secret",

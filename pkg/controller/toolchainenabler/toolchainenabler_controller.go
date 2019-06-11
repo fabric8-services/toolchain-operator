@@ -40,7 +40,7 @@ import (
 var log = logf.Log.WithName("controller_toolchainenabler")
 
 const (
-	TCSecretName      = "toolChainSecretName"
+	TCSecretName      = "toolchainSecretName"
 	SelfProvisioner   = "system:toolchain-sre:self-provisioner"
 	DsaasClusterAdmin = "system:toolchain-sre:dsaas-cluster-admin"
 )
@@ -377,23 +377,23 @@ func (r ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.Tool
 	return nil
 }
 
-func (r ReconcileToolChainEnabler) clusterInfo(ns string, cfg config.ToolChainConfig, options ...cluster.SASecretOption) (*clusterclient.CreateClusterData, error) {
+func (r ReconcileToolChainEnabler) clusterInfo(ns string, cfg config.ToolchainConfig, options ...cluster.SASecretOption) (*clusterclient.CreateClusterData, error) {
 	i := cluster.NewConfigInformer(r.client, ns, cfg.GetClusterName())
 	return i.Inform(options...)
 }
 
-func (r ReconcileToolChainEnabler) saveClusterConfiguration(data *clusterclient.CreateClusterData, cfg config.ToolChainConfig, options ...httpsupport.HTTPClientOption) error {
+func (r ReconcileToolChainEnabler) saveClusterConfiguration(data *clusterclient.CreateClusterData, cfg config.ToolchainConfig, options ...httpsupport.HTTPClientOption) error {
 	service := cluster.NewClusterService(cfg)
 	return service.CreateCluster(context.Background(), data, options...)
 }
 
-func createConfig(client client.Client, namespaceName string, spec codereadyv1alpha1.ToolChainEnablerSpec) (tcConfig config.ToolChainConfig, err error) {
-	if spec.ToolChainSecretName == "" {
+func createConfig(client client.Client, namespaceName string, spec codereadyv1alpha1.ToolChainEnablerSpec) (tcConfig config.ToolchainConfig, err error) {
+	if spec.ToolchainSecretName == "" {
 		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty", TCSecretName))
 	}
-	secret, err := client.GetSecret(namespaceName, spec.ToolChainSecretName)
+	secret, err := client.GetSecret(namespaceName, spec.ToolchainSecretName)
 	if err != nil {
-		return tcConfig, errs.Wrapf(err, "failed to get secret '%s'", spec.ToolChainSecretName)
+		return tcConfig, errs.Wrapf(err, "failed to get secret '%s'", spec.ToolchainSecretName)
 	}
 	return config.Create(spec, secret)
 }

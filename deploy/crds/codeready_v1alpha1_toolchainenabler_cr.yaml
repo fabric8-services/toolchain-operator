@@ -9,4 +9,4 @@ spec:
   authURL: https://auth.openshift.io
   clusterURL: https://cluster.openshift.io
   clusterName: "dsaas-stage"
-  toolChainSecretName: toolchain
+  toolchainSecretName: toolchain

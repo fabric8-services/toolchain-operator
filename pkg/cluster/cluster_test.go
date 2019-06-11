@@ -157,8 +157,8 @@ func setupGockForAuth() {
 		BodyString(`{"access_token":"` + TOKEN + `","token_type":"Bearer"}`)
 }
 
-func newConfig() config.ToolChainConfig {
-	return config.ToolChainConfig{
+func newConfig() config.ToolchainConfig {
+	return config.ToolchainConfig{
 		ClusterName:  "dsaas-stage",
 		ClientID:     "bb6d043d-f243-458f-8498-2c18a12dcf47",
 		ClientSecret: "secret",

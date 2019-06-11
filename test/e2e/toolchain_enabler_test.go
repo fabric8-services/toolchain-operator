@@ -61,7 +61,7 @@ func TestToolChainEnabler(t *testing.T) {
 			AuthURL:             "https://auth.openshift.io",
 			ClusterURL:          "https://cluster.openshift.io",
 			ClusterName:         "dsaas-stage",
-			ToolChainSecretName: "toolchain",
+			ToolchainSecretName: "toolchain",
 		},
 	}
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
