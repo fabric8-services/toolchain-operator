@@ -57,3 +57,13 @@ roleRef:
   kind: Role
   name: toolchain-enabler
   apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: toolchain
+type: Opaque
+data:
+  tc.client.id: YmI2ZDA0M2QtZjI0My00NThmLTg0OTgtMmMxOGExMmRjZjQ3
+  tc.client.secret: c2VjcmV0
