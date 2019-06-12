@@ -2,6 +2,7 @@ package toolchainenabler
 
 import (
 	"context"
+	"time"
 
 	"fmt"
 
@@ -11,8 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-
-	"time"
 
 	clusterclient "github.com/fabric8-services/fabric8-cluster-client/cluster"
 	"github.com/fabric8-services/fabric8-common/httpsupport"
@@ -41,6 +40,7 @@ import (
 var log = logf.Log.WithName("controller_toolchainenabler")
 
 const (
+	TCSecretName      = "toolchainSecretName"
 	SelfProvisioner   = "system:toolchain-sre:self-provisioner"
 	DsaasClusterAdmin = "system:toolchain-sre:dsaas-cluster-admin"
 )
@@ -49,12 +49,7 @@ const (
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, infraCache cache.Cache) error {
 
-	configuration, err := config.NewConfiguration()
-	if err != nil {
-		return errs.Wrapf(err, "something went wrong while creating configuration")
-	}
-
-	reconciler := &ReconcileToolChainEnabler{client: client.NewClient(mgr.GetClient()), scheme: mgr.GetScheme(), config: configuration, cache: infraCache}
+	reconciler := &ReconcileToolChainEnabler{client: client.NewClient(mgr.GetClient()), scheme: mgr.GetScheme(), cache: infraCache}
 
 	// Create a new controller
 	c, err := controller.New("toolchainenabler-controller", mgr, controller.Options{Reconciler: reconciler})
@@ -127,7 +122,6 @@ type ReconcileToolChainEnabler struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
-	config *config.Configuration
 
 	// maintaining secondary cache for openshift-infra namespace to do necessary actions for Service Account
 	cache cache.Cache
@@ -198,13 +192,18 @@ func (r *ReconcileToolChainEnabler) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	clusterData, err := r.clusterInfo(namespacedName.Namespace)
+	cfg, err := createConfig(r.client, namespacedName.Namespace, instance.Spec)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.saveClusterConfiguration(clusterData); err != nil {
-		log.Error(err, "failed to save cluster configuration in cluster service", "cluster_service_url", r.config.GetClusterServiceURL())
+	clusterData, err := r.clusterInfo(namespacedName.Namespace, cfg)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.saveClusterConfiguration(clusterData, cfg); err != nil {
+		log.Error(err, "failed to save cluster configuration in cluster service", "cluster_service_url", cfg.GetClusterServiceURL())
 		// requeue after 5 seconds if failed while calling remote cluster service
 		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
@@ -378,12 +377,23 @@ func (r ReconcileToolChainEnabler) ensureOAuthClient(tce *codereadyv1alpha1.Tool
 	return nil
 }
 
-func (r ReconcileToolChainEnabler) clusterInfo(ns string, options ...cluster.SASecretOption) (*clusterclient.CreateClusterData, error) {
-	i := cluster.NewConfigInformer(r.client, ns, r.config.GetClusterName())
+func (r ReconcileToolChainEnabler) clusterInfo(ns string, cfg config.ToolchainConfig, options ...cluster.SASecretOption) (*clusterclient.CreateClusterData, error) {
+	i := cluster.NewConfigInformer(r.client, ns, cfg.GetClusterName())
 	return i.Inform(options...)
 }
 
-func (r ReconcileToolChainEnabler) saveClusterConfiguration(data *clusterclient.CreateClusterData, options ...httpsupport.HTTPClientOption) error {
-	service := cluster.NewClusterService(r.config)
+func (r ReconcileToolChainEnabler) saveClusterConfiguration(data *clusterclient.CreateClusterData, cfg config.ToolchainConfig, options ...httpsupport.HTTPClientOption) error {
+	service := cluster.NewClusterService(cfg)
 	return service.CreateCluster(context.Background(), data, options...)
+}
+
+func createConfig(client client.Client, namespaceName string, spec codereadyv1alpha1.ToolChainEnablerSpec) (tcConfig config.ToolchainConfig, err error) {
+	if spec.ToolchainSecretName == "" {
+		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty", TCSecretName))
+	}
+	secret, err := client.GetSecret(namespaceName, spec.ToolchainSecretName)
+	if err != nil {
+		return tcConfig, errs.Wrapf(err, "failed to get secret '%s'", spec.ToolchainSecretName)
+	}
+	return config.Create(spec, secret)
 }

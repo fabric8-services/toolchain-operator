@@ -10,10 +10,6 @@ parameters:
   value: staging
 - name: IMAGE_TAG
   value: latest
-- name: TC_CLIENT_ID
-  required: true
-- name: TC_CLIENT_SECRET
-  required: true
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
@@ -43,21 +39,3 @@ objects:
     name: toolchain-operator
     source: toolchain-catalog
     sourceNamespace: toolchain-manager
-
-- apiVersion: v1
-  kind: Secret
-  metadata:
-    name: toolchain
-  type: Opaque
-  stringData:
-    tc.client.id: ${TC_CLIENT_ID}
-    tc.client.secret: ${TC_CLIENT_SECRET}
-
-- apiVersion: v1
-  kind: ConfigMap
-  metadata:
-    name: toolchain
-  data:
-    auth.url: https://auth.openshift.io
-    cluster.url: https://cluster.openshift.io
-    cluster.name: "dsaas-stage"   # this is workaround to run tests on minishift

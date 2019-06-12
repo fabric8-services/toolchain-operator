@@ -1,9 +1,10 @@
 package e2e
 
 import (
+	"testing"
+
 	"github.com/fabric8-services/toolchain-operator/pkg/apis"
 	codereadyv1alpha1 "github.com/fabric8-services/toolchain-operator/pkg/apis/codeready/v1alpha1"
-	"testing"
 
 	"github.com/fabric8-services/toolchain-operator/pkg/client"
 	"github.com/fabric8-services/toolchain-operator/pkg/config"
@@ -55,6 +56,12 @@ func TestToolChainEnabler(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "example-toolchainenabler",
 			Namespace: namespace,
+		},
+		Spec: codereadyv1alpha1.ToolChainEnablerSpec{
+			AuthURL:             "https://auth.openshift.io",
+			ClusterURL:          "https://cluster.openshift.io",
+			ClusterName:         "dsaas-stage",
+			ToolchainSecretName: "toolchain",
 		},
 	}
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object

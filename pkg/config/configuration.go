@@ -3,85 +3,83 @@ package config
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/viper"
+	codereadyv1alpha1 "github.com/fabric8-services/toolchain-operator/pkg/apis/codeready/v1alpha1"
+	errs "github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
-	AuthURL         = "auth.url"
-	ClusterURL      = "cluster.url"
 	TCClientID      = "tc.client.id"
 	TCClientSecret  = "tc.client.secret"
-	ClusterName     = "cluster.name"
 	Name            = "toolchain-enabler"
 	SAName          = "toolchain-sre"
 	OAuthClientName = "codeready-toolchain"
 )
 
-// Configuration encapsulates the Viper configuration object which stores the configuration data.
-type Configuration struct {
-	v *viper.Viper
+type ToolchainConfig struct {
+	AuthURL      string
+	ClusterURL   string
+	ClusterName  string
+	ClientID     string
+	ClientSecret string
 }
 
-// New creates a configuration reader object using Env Variables
-func NewConfiguration() (*Configuration, error) {
-	c := &Configuration{
-		v: viper.New(),
-	}
-
-	c.v.AutomaticEnv()
-	c.v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-
-	if err := c.validateURL(c.GetAuthServiceURL(), "auth service"); err != nil {
-		return c, err
-	}
-
-	if err := c.validateURL(c.GetClusterServiceURL(), "cluster service"); err != nil {
-		return c, err
-	}
-
-	return c, nil
+func (c ToolchainConfig) GetClusterServiceURL() string {
+	return c.ClusterURL
 }
 
-// returns the hostname of the given URL if this latter was not empty
-func (c *Configuration) validateURL(serviceURL, serviceName string) error {
+func (c ToolchainConfig) GetAuthServiceURL() string {
+	return c.AuthURL
+}
+
+func (c ToolchainConfig) GetClientID() string {
+	return c.ClientID
+}
+
+func (c ToolchainConfig) GetClientSecret() string {
+	return c.ClientSecret
+}
+
+func (c ToolchainConfig) GetClusterName() string {
+	return c.ClusterName
+}
+
+func Create(spec codereadyv1alpha1.ToolChainEnablerSpec, secret *v1.Secret) (tcConfig ToolchainConfig, err error) {
+	if err = validateURL(spec.AuthURL, "auth service"); err != nil {
+		return tcConfig, err
+	}
+	if err = validateURL(spec.ClusterURL, "cluster service"); err != nil {
+		return tcConfig, err
+	}
+	if len(secret.Data[TCClientID]) <= 0 {
+		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientID, spec.ToolchainSecretName))
+	}
+	if len(secret.Data[TCClientSecret]) <= 0 {
+		return tcConfig, errs.New(fmt.Sprintf("'%s' is empty in secret '%s'", TCClientSecret, spec.ToolchainSecretName))
+	}
+
+	tcConfig = ToolchainConfig{
+		AuthURL:      spec.AuthURL,
+		ClusterURL:   spec.ClusterURL,
+		ClusterName:  spec.ClusterName,
+		ClientID:     string(secret.Data[TCClientID]),
+		ClientSecret: string(secret.Data[TCClientSecret]),
+	}
+	return tcConfig, nil
+}
+
+func validateURL(serviceURL, serviceName string) error {
 	if serviceURL == "" {
-		return errors.New(fmt.Sprintf("%s url is empty", serviceName))
+		return errs.New(fmt.Sprintf("'%s' url is empty", serviceName))
 	} else {
 		u, err := url.Parse(serviceURL)
 		if err != nil {
-			return errors.Wrapf(err, fmt.Sprintf("invalid url for %s: %s", serviceName, serviceURL))
+			return errs.Wrapf(err, fmt.Sprintf("invalid url for %s: '%s'", serviceName, serviceURL))
 		}
 		if u.Host == "" {
-			return errors.New(fmt.Sprintf("invalid url '%s' (missing scheme or host?) for: %s", serviceURL, serviceName))
+			return errs.New(fmt.Sprintf("invalid url '%s' (missing scheme or host?) for: %s", serviceURL, serviceName))
 		}
 	}
 	return nil
-}
-
-// GetAuthServiceURL returns Auth Service URL
-func (c *Configuration) GetAuthServiceURL() string {
-	return c.v.GetString(AuthURL)
-}
-
-// GetClusterServiceURL returns Cluster Service URL
-func (c *Configuration) GetClusterServiceURL() string {
-	return c.v.GetString(ClusterURL)
-}
-
-// GetClientID return toolchain client-id required to create SA token
-func (c *Configuration) GetClientID() string {
-	return c.v.GetString(TCClientID)
-}
-
-// GetClientSecret return toolchain secret required to create SA token
-func (c *Configuration) GetClientSecret() string {
-	return c.v.GetString(TCClientSecret)
-}
-
-// // GetClusterName returns cluster name confifured while creating cluster
-func (c *Configuration) GetClusterName() string {
-	return c.v.GetString(ClusterName)
 }

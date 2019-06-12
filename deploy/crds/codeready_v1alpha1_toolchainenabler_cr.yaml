@@ -4,3 +4,9 @@ kind: ToolChainEnabler
 metadata:
   name: example-toolchainenabler
 spec:
+  # authURL: http://auth-fabric8-services.192.168.42.205.nip.io
+  # clusterURL: http://f8cluster-fabric8-services.192.168.42.205.nip.io
+  authURL: https://auth.openshift.io
+  clusterURL: https://cluster.openshift.io
+  clusterName: "dsaas-stage"
+  toolchainSecretName: toolchain
