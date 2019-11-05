@@ -3,6 +3,7 @@ LABEL maintainer "Devtools <devtools@redhat.com>"
 LABEL author "Devtools <devtools@redhat.com>"
 ENV LANG=en_US.utf8
 ENV GOPATH /tmp/go
+ENV GOCACHE /tmp/.cache
 ARG GO_PACKAGE_PATH=github.com/fabric8-services/toolchain-operator
 
 ENV GIT_COMMITTER_NAME devtools
