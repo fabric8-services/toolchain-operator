@@ -19,7 +19,7 @@ lint-yaml: ./vendor ${YAML_FILES}
 .PHONY: lint-go-code
 ## Checks the code with golangci-lint
 lint-go-code: ./vendor
-	$(Q)go get github.com/golangci/golangci-lint/cmd/golangci-lint
+	$(Q)GOCACHE=$(shell pwd)/out/gocache go get github.com/golangci/golangci-lint/cmd/golangci-lint
 	$(Q)${GOPATH}/bin/golangci-lint ${V_FLAG} run
 
 endif
