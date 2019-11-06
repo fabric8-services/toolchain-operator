@@ -12,7 +12,6 @@ include ./make/dev.mk
 include ./make/format.mk
 include ./make/lint.mk
 include ./make/test.mk
-include ./make/docker.mk
 
 .PHONY: build
 ## Build the operator
