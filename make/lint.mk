@@ -1,8 +1,6 @@
 ifndef LINT_MK
 LINT_MK:=# Prevent repeated "-include".
 
-GOLANGCI_LINT_BIN=./out/golangci-lint
-
 include ./make/verbose.mk
 include ./make/go.mk
 
@@ -19,7 +17,7 @@ lint-yaml: ./vendor ${YAML_FILES}
 .PHONY: lint-go-code
 ## Checks the code with golangci-lint
 lint-go-code: ./vendor
-	$(Q)GOCACHE=$(shell pwd)/out/gocache go get github.com/golangci/golangci-lint/cmd/golangci-lint
-	$(Q)${GOPATH}/bin/golangci-lint ${V_FLAG} run
+	$(Q)go get github.com/golangci/golangci-lint/cmd/golangci-lint
+	$(Q)GOCACHE=$(shell pwd)/out/gocache ${GOPATH}/bin/golangci-lint ${V_FLAG} run
 
 endif
